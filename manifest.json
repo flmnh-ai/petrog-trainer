@@ -1852,8 +1852,11 @@
     }
   },
   "files": {
+    ".gitattributes": {
+      "checksum": "05bdb783ee6514c8c072e47680af8ff7"
+    },
     "app.R": {
-      "checksum": "8c668debabf44eb9b7683db3f2aba390"
+      "checksum": "2a06d2b41b501c3000ba4a068850f800"
     },
     "data/ground_truth_objects.csv": {
       "checksum": "33a944ff2f0ccec111d69597e8cfcbe3"
@@ -1864,13 +1867,10 @@
     "data/prep_ground_truth.R": {
       "checksum": "0afa171742dd446e8ae459f80e8daaa6"
     },
-    "petrog-trainer/.gitattributes": {
-      "checksum": "05bdb783ee6514c8c072e47680af8ff7"
-    },
-    "petrog-trainer/LICENSE": {
+    "LICENSE": {
       "checksum": "f863dfa519a456406179033472b14a73"
     },
-    "petrog-trainer/README.md": {
+    "README.md": {
       "checksum": "d0934ac0b069e169dab5a21d83d54345"
     },
     "www/images/annotated/8-587_xp_000020_result.png": {
