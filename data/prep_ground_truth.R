@@ -4,8 +4,25 @@ library(readr)
 raw <- read_csv("/Users/nick/dropbox/Projects/petrographer/data/lyons_annotations/output_objects.csv",
                 show_col_types = FALSE)
 
-selected <- c("8-587_xp_000065.jpg", "8-587_xp_000060.jpg", "8-587_xp_000027.jpg",
-               "8-587_xp_000029.jpg", "8-587_xp_000020.jpg", "8-587_xp_000043.jpg")
+# Curated interior tiles — edge tiles excluded (000010, 000014, 000020, 000023,
+# 000025, 000027, 000055, 000058-066 all have epoxy/mounting medium visible)
+selected <- c(
+  "8-587_xp_000016.jpg",  # 18.4%, n=101
+  "8-587_xp_000019.jpg",  # 26.7%, n=102, large inclusions
+  "8-587_xp_000029.jpg",  # 19.9%, n=100
+  "8-587_xp_000030.jpg",  # 20.0%, n=100
+  "8-587_xp_000032.jpg",  # 27.2%, n=100
+  "8-587_xp_000033.jpg",  # 22.6%, n=102
+  "8-587_xp_000034.jpg",  # 24.3%, n=100
+  "8-587_xp_000036.jpg",  # 17.2%, n=100
+  "8-587_xp_000040.jpg",  # 19.6%, n=101, vivid birefringence
+  "8-587_xp_000043.jpg",  # 15.8%, n=102
+  "8-587_xp_000044.jpg",  # 16.9%, n=100
+  "8-587_xp_000046.jpg",  # 23.1%, n=101
+  "8-587_xp_000047.jpg",  # 29.3%, n=100, highest inclusion %
+  "8-587_xp_000048.jpg",  # 17.2%, n=101
+  "8-587_xp_000051.jpg"   # 23.2%, n=100, prominent large grain
+)
 
 dat <- raw |>
   filter(`File Name` %in% selected) |>
