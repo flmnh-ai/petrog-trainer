@@ -1888,7 +1888,7 @@
       "checksum": "05bdb783ee6514c8c072e47680af8ff7"
     },
     "app.R": {
-      "checksum": "121136cdd5307702ebd15d9957ca8ace"
+      "checksum": "363aa073db5d550ba4f3db5b0d7d5832"
     },
     "data/gen_comparison_charts.R": {
       "checksum": "cb22ab86cb8747c5d359737fc05a5f96"
@@ -1908,65 +1908,65 @@
     "scripts/gen_seg_overlays.py": {
       "checksum": "cf287813198df7723e5e890a21fe0628"
     },
-    "www/images/annotated/12_251_xp_000025_result.png": {
-      "checksum": "3c7761ec8c0ebdba556c9210709be98c"
+    "www/images/annotated/12_251_xp_000025_result.jpg": {
+      "checksum": "1ba809025ef49354bd09e39540bd277f"
     },
-    "www/images/annotated/12_251_xp_000030_result.png": {
-      "checksum": "ce252fff9d69a8af8f3730ed1f83ffd0"
+    "www/images/annotated/12_251_xp_000030_result.jpg": {
+      "checksum": "8ce092a2d0ccfae5b7e71c4bf89d701f"
     },
-    "www/images/annotated/12_251_xp_000035_result.png": {
-      "checksum": "71d40bfaf0c5c5a86def29bfb862bbe4"
+    "www/images/annotated/12_251_xp_000035_result.jpg": {
+      "checksum": "3af800ecf85407595764479def28c3f8"
     },
-    "www/images/annotated/139-45_xp_000035_result.png": {
-      "checksum": "6fae2c7c14e3411ba0af8375aa3b3a2b"
+    "www/images/annotated/139-45_xp_000035_result.jpg": {
+      "checksum": "71a14293f2eba40f33f56cad066685b5"
     },
-    "www/images/annotated/139-45_xp_000057_result.png": {
-      "checksum": "adb1a450151583c97db7cb7af9b5fa8d"
+    "www/images/annotated/139-45_xp_000057_result.jpg": {
+      "checksum": "e1db8cfe445414c7347eec7a7f6dd3df"
     },
-    "www/images/annotated/17-112_xp_000037_result.png": {
-      "checksum": "9532e69064ff2f76ec64577efdfdf651"
+    "www/images/annotated/17-112_xp_000037_result.jpg": {
+      "checksum": "43a78a7a42c3c03707967a13adbbad8b"
     },
-    "www/images/annotated/17-112_xp_000041_result.png": {
-      "checksum": "d8dcf8add8344d9ed286138b4adaf5d7"
+    "www/images/annotated/17-112_xp_000041_result.jpg": {
+      "checksum": "12b684704d1eba7314687a2e99d7b701"
     },
-    "www/images/annotated/17-112_xp_000043_result.png": {
-      "checksum": "943ed4aa8a107b3c3127871445bc1682"
+    "www/images/annotated/17-112_xp_000043_result.jpg": {
+      "checksum": "3505154ad307cbf2e3f225635e3d8b2a"
     },
-    "www/images/annotated/17-142_xp_000038_result.png": {
-      "checksum": "f667b94f75e72c07251666b0a225f03c"
+    "www/images/annotated/17-142_xp_000038_result.jpg": {
+      "checksum": "623979aa18912e7d2a10f985b59d6b68"
     },
-    "www/images/annotated/17-142_xp_000045_result.png": {
-      "checksum": "c7dd5d523b8030bc84e78d29ed52585d"
+    "www/images/annotated/17-142_xp_000045_result.jpg": {
+      "checksum": "abe306c9463ff885a777a840c1947598"
     },
-    "www/images/annotated/17-142_xp_000055_result.png": {
-      "checksum": "5e32977bd5bbb231640fc42b79e40923"
+    "www/images/annotated/17-142_xp_000055_result.jpg": {
+      "checksum": "95853916ab775621a863bf41faa2016e"
     },
-    "www/images/annotated/53-204_xp_000009_result.png": {
-      "checksum": "b8903601724151bdb6bd4d93c02c90ef"
+    "www/images/annotated/53-204_xp_000009_result.jpg": {
+      "checksum": "758cc2c8319f00d7d5782ec31d1dc1f2"
     },
-    "www/images/annotated/53-204_xp_000010_result.png": {
-      "checksum": "241cb532ddc284ab385c834082c23a44"
+    "www/images/annotated/53-204_xp_000010_result.jpg": {
+      "checksum": "c10ad1d7b262e8970b2b1b56a0f3329d"
     },
-    "www/images/annotated/53-204_xp_000012_result.png": {
-      "checksum": "90beb81c93028686c2ecea2c693f70d5"
+    "www/images/annotated/53-204_xp_000012_result.jpg": {
+      "checksum": "49fbdfd29d778c498b087a721d684eae"
     },
-    "www/images/annotated/8-587_xp_000030_result.png": {
-      "checksum": "c72b9177feb9eb7589a970eec9346acd"
+    "www/images/annotated/8-587_xp_000030_result.jpg": {
+      "checksum": "7482c194f425aa78ce2ed81f54ec1cef"
     },
-    "www/images/annotated/8-587_xp_000034_result.png": {
-      "checksum": "da07751a532d7320783f1dbff5c3aff4"
+    "www/images/annotated/8-587_xp_000034_result.jpg": {
+      "checksum": "f6cd46675a17c24748b8ff15cf8208fd"
     },
-    "www/images/annotated/8-587_xp_000040_result.png": {
-      "checksum": "4bae63539caeccbc7086e8af37eaa8ff"
+    "www/images/annotated/8-587_xp_000040_result.jpg": {
+      "checksum": "f592d8a69d7332e46122a82336c3cd3f"
     },
-    "www/images/annotated/90-53_xp_000020_result.png": {
-      "checksum": "3fa238b0122afc97b4fa045b2330a818"
+    "www/images/annotated/90-53_xp_000020_result.jpg": {
+      "checksum": "b9cd62074ec848cf5efe93a6fd678774"
     },
-    "www/images/annotated/90-53_xp_000025_result.png": {
-      "checksum": "517123d94a1f6e1f5c37d507fe7df5d0"
+    "www/images/annotated/90-53_xp_000025_result.jpg": {
+      "checksum": "7f4023d10fc3bf107fa19edf7f9502f1"
     },
-    "www/images/annotated/90-53_xp_000030_result.png": {
-      "checksum": "c82865236f6fd72cd384fbaa69733518"
+    "www/images/annotated/90-53_xp_000030_result.jpg": {
+      "checksum": "28eeaa3bdbd67821a1675b6278ea0062"
     },
     "www/images/comparison/pct_01.png": {
       "checksum": "162244ce83d6ce6cc5fec74f7cd4dbd1"
@@ -2002,64 +2002,64 @@
       "checksum": "c3699a8b9f692cdf83da51ef8466f519"
     },
     "www/images/original/12_251_xp_000025.jpg": {
-      "checksum": "f456d8771fd27d56bbc3459da001c9ef"
+      "checksum": "bb0f60299d7148e07c242b8098d7bfe3"
     },
     "www/images/original/12_251_xp_000030.jpg": {
-      "checksum": "61e8f0606ff60a41e6a6cd54342b7425"
+      "checksum": "e21a585eadc2b7cf62e657a934539240"
     },
     "www/images/original/12_251_xp_000035.jpg": {
-      "checksum": "3cd0eb71764d9b76f7d040a443cb02e6"
+      "checksum": "306683f0062da5705bfcf1334e819cf7"
     },
     "www/images/original/139-45_xp_000035.jpg": {
-      "checksum": "40fc21198499ecc1a850e080d3a3290e"
+      "checksum": "4e4a62cae18abca8003efab155ea39e9"
     },
     "www/images/original/139-45_xp_000057.jpg": {
-      "checksum": "47ec68bd6e8d7400b7a4a2f08ca75ba4"
+      "checksum": "dc5310e82b56e6d1619cd64afc53555d"
     },
     "www/images/original/17-112_xp_000037.jpg": {
-      "checksum": "1f89a8b25f7023456eae93c3866ff1f8"
+      "checksum": "a49d54fe0f33923e4de9b4a06b84da93"
     },
     "www/images/original/17-112_xp_000041.jpg": {
-      "checksum": "7822c56d54a630a103c7f9ca4f7206d9"
+      "checksum": "5f4e290dda0cc10eec01e1025a3ee806"
     },
     "www/images/original/17-112_xp_000043.jpg": {
-      "checksum": "29e31a90778d67af9ac5d16309bcb407"
+      "checksum": "7da4c519dfe5678f2e7789fe290e2068"
     },
     "www/images/original/17-142_xp_000038.jpg": {
-      "checksum": "e142fbdef579c7c794fd99ccc350a4e4"
+      "checksum": "d77f65e663ce3ab31dc78ebaf31da6b7"
     },
     "www/images/original/17-142_xp_000045.jpg": {
-      "checksum": "e64b4b14497e1448a919a02f536568f7"
+      "checksum": "4963c6b4ddbee4c745f44796d2697114"
     },
     "www/images/original/17-142_xp_000055.jpg": {
-      "checksum": "722d30f5e4c9b3922206242369979930"
+      "checksum": "323ad434b5e8eea7bbb0830fe046eba5"
     },
     "www/images/original/53-204_xp_000009.jpg": {
-      "checksum": "1a77786c39ef945f8a925c108248b5a8"
+      "checksum": "1ba5de5420dfe23cdca9b88ce2ff6f5f"
     },
     "www/images/original/53-204_xp_000010.jpg": {
-      "checksum": "fafea0056cc59394b2fdaf9b3a7b4a28"
+      "checksum": "16564d940afd649b734a90f378f54957"
     },
     "www/images/original/53-204_xp_000012.jpg": {
-      "checksum": "a5b36cac02de5e6ad0e0ca17e76a8ef2"
+      "checksum": "95f16a18a8953544cfcd12f3620319a2"
     },
     "www/images/original/8-587_xp_000030.jpg": {
-      "checksum": "16215cabb2fcd324e80de1e4f8304e54"
+      "checksum": "d3cb204e4f87a5c338297ccc0af777f3"
     },
     "www/images/original/8-587_xp_000034.jpg": {
-      "checksum": "c7d03c09f6374533c7b8707852a18fb8"
+      "checksum": "4a28cfd96cc768d589d70a81f78112df"
     },
     "www/images/original/8-587_xp_000040.jpg": {
-      "checksum": "3582a9925338b42232a7b2d290a14e81"
+      "checksum": "41be9b63123ed6ebd673f6480a17b31d"
     },
     "www/images/original/90-53_xp_000020.jpg": {
-      "checksum": "f00c8e9b58088b40f1e725a73cbe563b"
+      "checksum": "7636f7a1b948a30019b8cf76d8b15a7d"
     },
     "www/images/original/90-53_xp_000025.jpg": {
-      "checksum": "1362a91034ae2ee44fe123b3e00f008f"
+      "checksum": "add42e9b92a65dd604da87021913265d"
     },
     "www/images/original/90-53_xp_000030.jpg": {
-      "checksum": "a81f9a953c77926554b3e5d9afc93959"
+      "checksum": "4972b3b30104d98d903d22118f1b4954"
     }
   },
   "users": null

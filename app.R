@@ -13,7 +13,7 @@ samples <- ground_truth |>
   arrange(fabric_type, sample_name, sample_id) |>
   mutate(
     orig_path = paste0("images/original/", file_name),
-    anno_path = paste0("images/annotated/", gsub(".jpg", "_result.png", file_name, fixed = TRUE))
+    anno_path = paste0("images/annotated/", gsub(".jpg", "_result.jpg", file_name, fixed = TRUE))
   )
 
 n_samples <- nrow(samples)
