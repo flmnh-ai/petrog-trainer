@@ -15,7 +15,16 @@ from PIL import Image, ImageDraw, ImageFont
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_DIR = os.path.dirname(SCRIPT_DIR)
 PETROGRAPHER_DIR = os.path.expanduser("~/Dropbox/Projects/petrographer")
-IMG_DIR = os.path.join(PETROGRAPHER_DIR, "data/lyons_annotations/img")
+# Look for source images in multiple locations
+IMG_DIRS = [
+    os.path.join(PROJECT_DIR, "www/images/original"),  # Already-copied images (all sources)
+    os.path.join(PETROGRAPHER_DIR, "data/lyons_annotations/img"),  # Lyons 8-587
+    os.path.join(PETROGRAPHER_DIR, "data/raw/Lyons_data/c"),  # Lyons Fabric C
+    os.path.join(PETROGRAPHER_DIR, "data/raw/Lyons_data/a"),  # Lyons Fabric A
+    os.path.join(PETROGRAPHER_DIR, "data/raw/Lyons_data/d"),  # Lyons Fabric D
+    os.path.join(PETROGRAPHER_DIR, "data/processed/inclusions/train"),  # NPP train
+    os.path.join(PETROGRAPHER_DIR, "data/processed/inclusions/valid"),  # NPP valid
+]
 OUTPUT_DIR = os.path.join(PROJECT_DIR, "www/images/annotated")
 OBJECTS_CSV = os.path.join(PROJECT_DIR, "data/ground_truth_objects.csv")
 
@@ -40,7 +49,7 @@ def parse_bbox(bbox_str):
 
 
 def generate_annotated_image(img_path, objects, output_path):
-    """Draw color-coded bounding boxes on the original image."""
+    """Draw color-coded ellipses (approximating grain shapes) on the original image."""
     img = Image.open(img_path).convert("RGBA")
     overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
@@ -54,8 +63,8 @@ def generate_annotated_image(img_path, objects, output_path):
         x1, y1, x2, y2 = bbox
         colors = SIZE_COLORS.get(size_class, SIZE_COLORS["Medium"])
 
-        # Draw filled rectangle with semi-transparent fill
-        draw.rectangle([x1, y1, x2, y2], fill=colors["fill"], outline=colors["outline"], width=2)
+        # Draw filled ellipse inscribed in the bounding box (approximates grain shape)
+        draw.ellipse([x1, y1, x2, y2], fill=colors["fill"], outline=colors["outline"], width=2)
 
     # Composite overlay onto original
     result = Image.alpha_composite(img, overlay)
@@ -123,9 +132,15 @@ def main():
     print(f"Generating color-coded annotations for {len(objects_by_file)} images...")
 
     for filename in sorted(objects_by_file.keys()):
-        img_path = os.path.join(IMG_DIR, filename)
-        if not os.path.exists(img_path):
-            print(f"  WARNING: {img_path} not found")
+        # Search multiple directories for the source image
+        img_path = None
+        for d in IMG_DIRS:
+            candidate = os.path.join(d, filename)
+            if os.path.exists(candidate):
+                img_path = candidate
+                break
+        if img_path is None:
+            print(f"  WARNING: {filename} not found in any source directory")
             continue
 
         out_name = filename.replace(".jpg", "_result.png")

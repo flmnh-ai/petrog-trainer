@@ -10,10 +10,10 @@ objects <- read_csv("data/ground_truth_objects.csv", show_col_types = FALSE)
 
 # Sample metadata
 samples <- ground_truth |>
-  arrange(sample_id) |>
+  arrange(fabric_type, sample_name, sample_id) |>
   mutate(
     orig_path = paste0("images/original/", file_name),
-    anno_path = paste0("images/annotated/", gsub(".jpg", "_result.png", file_name))
+    anno_path = paste0("images/annotated/", gsub(".jpg", "_result.png", file_name, fixed = TRUE))
   )
 
 n_samples <- nrow(samples)
@@ -219,6 +219,9 @@ ui <- page_navbar(
           actionButton("next_sample", icon("arrow-right"), class = "btn-sm btn-outline-secondary")
         ),
 
+        # Sample info badges
+        uiOutput("sample_info"),
+
         # Performance dots
         uiOutput("perf_dots"),
 
@@ -230,7 +233,8 @@ ui <- page_navbar(
                        "All Skills" = "all",
                        "Inclusion Area" = "area",
                        "Grain Size" = "size",
-                       "Grain Count" = "count"
+                       "Grain Count" = "count",
+                       "Sphericity" = "sphericity"
                      ),
                      selected = "all",
                      inline = TRUE),
@@ -265,7 +269,7 @@ ui <- page_navbar(
           div(
             class = "sidebar-section",
             sliderInput("guess_count", "Estimated number of inclusions",
-                        min = 0, max = 200, value = 50, step = 5)
+                        min = 0, max = 300, value = 50, step = 5)
           )
         ),
 
@@ -290,6 +294,27 @@ ui <- page_navbar(
                           choices = c("Fine", "Medium", "Coarse", "Very Coarse"),
                           selected = "Coarse")
             )
+          )
+        ),
+
+        # --- Sphericity inputs ---
+        conditionalPanel(
+          condition = "input.module == 'all' || input.module == 'sphericity'",
+          div(
+            class = "sidebar-section",
+            h6("Grain shape"),
+            selectInput("guess_roundedness", "Roundedness",
+                        choices = c("Angular" = "angular",
+                                    "Sub-angular" = "subangular",
+                                    "Sub-rounded" = "subrounded",
+                                    "Rounded" = "rounded",
+                                    "Well-rounded" = "wellrounded"),
+                        selected = "subrounded"),
+            selectInput("guess_sphericity", "Sphericity",
+                        choices = c("Low (elongated)" = "low",
+                                    "Medium" = "medium",
+                                    "High (equant)" = "high"),
+                        selected = "medium")
           )
         ),
 
@@ -341,7 +366,8 @@ ui <- page_navbar(
         tags$li(tags$strong("All Skills"), " \u2014 Practice area estimation, grain counting, and size distribution together"),
         tags$li(tags$strong("Inclusion Area"), " \u2014 Estimate what percentage of the image is occupied by inclusions (temper + aplastics)"),
         tags$li(tags$strong("Grain Size"), " \u2014 Characterize the grain size distribution across Fine, Medium, Coarse, and Very Coarse categories"),
-        tags$li(tags$strong("Grain Count"), " \u2014 Estimate the total number of visible inclusions")
+        tags$li(tags$strong("Grain Count"), " \u2014 Estimate the total number of visible inclusions"),
+        tags$li(tags$strong("Sphericity"), " \u2014 Assess grain roundedness and sphericity (elongation)")
       ),
       h4("How to Use"),
       tags$ol(
@@ -365,9 +391,10 @@ ui <- page_navbar(
       p("These colors match the bar chart showing grain size distribution, so you can see exactly",
         "which detected grains fall into which size class."),
       h4("About the Images"),
-      p("These are cross-polarized light (XPL) photomicrographs of ceramic thin sections from sample 8-587.",
-        "Inclusions (temper and natural aplastics) appear as bright, colorful grains in the clay matrix.",
-        "The AI analysis uses an object detection model (RF-DETR) trained to identify and measure individual inclusions.",
+      p("These are cross-polarized light (XPL) photomicrographs of ceramic thin sections from 5 fabric types (A, C, D, E, W)",
+        "across multiple samples. Inclusions (temper and natural aplastics) appear as bright, colorful grains in the clay matrix.",
+        "The AI analysis uses a segmentation model (RF-DETR Seg) that detects individual inclusion boundaries and measures",
+        "their morphological properties (area, circularity, aspect ratio, solidity).",
         "All images are interior views \u2014 tiles near the sample edge have been excluded to avoid artifacts."),
       h4("Size Categories"),
       tags$table(
@@ -444,6 +471,7 @@ server <- function(input, output, session) {
       area_score = numeric(),
       count_score = numeric(),
       size_score = numeric(),
+      spher_score = numeric(),
       overall = numeric(),
       area_bias = numeric(),
       count_bias = numeric()
@@ -473,8 +501,10 @@ server <- function(input, output, session) {
     mod <- input$module
 
     # Calculate scores based on active module
-    area_s <- if (mod %in% c("all", "area")) calc_score(input$guess_pct, s$inclusion_pct) else NA
-    count_s <- if (mod %in% c("all", "count")) calc_score(input$guess_count, s$n_inclusions) else NA
+    gp <- input$guess_pct %||% 0
+    gc <- input$guess_count %||% 0
+    area_s <- if (mod %in% c("all", "area")) calc_score(gp, s$inclusion_pct) else NA
+    count_s <- if (mod %in% c("all", "count")) calc_score(gc, s$n_inclusions) else NA
 
     size_s <- NA
     if (mod %in% c("all", "size")) {
@@ -484,7 +514,26 @@ server <- function(input, output, session) {
       size_s <- max(0, round(100 - size_mae * 2))
     }
 
-    valid_scores <- na.omit(c(area_s, count_s, size_s))
+    # Sphericity scoring: compare roundedness + sphericity guesses to AI morphology
+    spher_s <- NA
+    if (mod %in% c("all", "sphericity")) {
+      # Map roundedness guess to circularity range
+      round_map <- c(angular = 0.4, subangular = 0.55, subrounded = 0.7,
+                     rounded = 0.82, wellrounded = 0.92)
+      guess_circ <- round_map[input$guess_roundedness]
+      gt_circ <- if (!is.null(s$mean_circularity) && !is.na(s$mean_circularity)) s$mean_circularity else 0.75
+      circ_err <- abs(guess_circ - gt_circ) / 0.5 * 100  # scale to 0-100
+
+      # Map sphericity guess to aspect ratio range
+      spher_map <- c(low = 2.5, medium = 1.6, high = 1.15)
+      guess_ar <- spher_map[input$guess_sphericity]
+      gt_ar <- if (!is.null(s$mean_aspect_ratio) && !is.na(s$mean_aspect_ratio)) s$mean_aspect_ratio else 1.6
+      ar_err <- abs(guess_ar - gt_ar) / 1.5 * 100
+
+      spher_s <- max(0, round(100 - mean(c(circ_err, ar_err))))
+    }
+
+    valid_scores <- na.omit(c(area_s, count_s, size_s, spher_s))
     overall <- if (length(valid_scores) > 0) round(mean(valid_scores)) else 0
 
     new_row <- data.frame(
@@ -493,9 +542,10 @@ server <- function(input, output, session) {
       area_score = ifelse(is.na(area_s), -1, area_s),
       count_score = ifelse(is.na(count_s), -1, count_s),
       size_score = ifelse(is.na(size_s), -1, size_s),
+      spher_score = ifelse(is.na(spher_s), -1, spher_s),
       overall = overall,
-      area_bias = if (!is.na(area_s) && !is.null(input$guess_pct)) input$guess_pct - s$inclusion_pct else NA,
-      count_bias = if (!is.na(count_s)) input$guess_count - s$n_inclusions else NA
+      area_bias = if (!is.na(area_s)) gp - s$inclusion_pct else NA,
+      count_bias = if (!is.na(count_s)) gc - s$n_inclusions else NA
     )
 
     existing <- rv$scores$sample == rv$current & rv$scores$module == mod
@@ -517,7 +567,34 @@ server <- function(input, output, session) {
 
   # Outputs
   output$sample_label <- renderText({
-    paste0("Sample ", rv$current, " / ", n_samples)
+    paste0(rv$current, " / ", n_samples)
+  })
+
+  # Sample info badge (sample name, fabric type, polarization)
+  output$sample_info <- renderUI({
+    s <- current_sample()
+    pol <- if (!is.null(s$polarization) && !is.na(s$polarization)) s$polarization else "XPL"
+    fabric <- if (!is.null(s$fabric_type) && !is.na(s$fabric_type)) s$fabric_type else ""
+    sample_name <- if (!is.null(s$sample_name) && !is.na(s$sample_name)) s$sample_name else ""
+
+    pol_color <- if (pol == "PPL") "#8e44ad" else "#2980b9"
+
+    div(
+      class = "text-center mb-1",
+      if (nchar(sample_name) > 0) tags$span(
+        class = "badge bg-secondary me-1",
+        sample_name
+      ),
+      if (nchar(fabric) > 0) tags$span(
+        class = "badge bg-info me-1",
+        paste0("Fabric ", fabric)
+      ),
+      tags$span(
+        class = "badge",
+        style = paste0("background:", pol_color),
+        pol
+      )
+    )
   })
 
   output$selected_pct_display <- renderText({
@@ -551,13 +628,15 @@ server <- function(input, output, session) {
   output$image_display <- renderUI({
     s <- current_sample()
 
+    pol <- if (!is.null(s$polarization) && !is.na(s$polarization)) s$polarization else "XPL"
+
     if (rv$revealed) {
       div(
         class = "row g-2 fade-in",
         div(
           class = "col-md-6",
           div(class = "card",
-              div(class = "card-header py-1", tags$small("Original (XPL)")),
+              div(class = "card-header py-1", tags$small(paste0("Original (", pol, ")"))),
               div(class = "card-body p-1 img-container-split",
                   tags$img(src = s$orig_path, class = "img-fluid",
                            alt = "Original thin section")))
@@ -574,7 +653,7 @@ server <- function(input, output, session) {
     } else {
       div(
         class = "card fade-in",
-        div(class = "card-header py-1", tags$small("Thin Section (XPL)")),
+        div(class = "card-header py-1", tags$small(paste0("Thin Section (", pol, ")"))),
         div(class = "card-body p-1 img-container",
             tags$img(src = s$orig_path, class = "img-fluid",
                      alt = "Original thin section"))
@@ -616,8 +695,8 @@ server <- function(input, output, session) {
     s <- current_sample()
     mod <- input$module
 
-    guess_pct <- input$guess_pct
-    guess_count <- input$guess_count
+    guess_pct <- input$guess_pct %||% 0
+    guess_count <- input$guess_count %||% 0
     gt_pct <- s$inclusion_pct
     gt_count <- s$n_inclusions
 
@@ -633,7 +712,21 @@ server <- function(input, output, session) {
       size_s <- max(0, round(100 - size_mae * 2))
     }
 
-    valid_scores <- Filter(Negate(is.null), list(area_s, count_s, size_s))
+    spher_s <- NULL
+    if (mod %in% c("all", "sphericity")) {
+      round_map <- c(angular = 0.4, subangular = 0.55, subrounded = 0.7,
+                     rounded = 0.82, wellrounded = 0.92)
+      spher_map <- c(low = 2.5, medium = 1.6, high = 1.15)
+      guess_circ <- round_map[input$guess_roundedness]
+      guess_ar <- spher_map[input$guess_sphericity]
+      gt_circ <- if (!is.null(s$mean_circularity) && !is.na(s$mean_circularity)) s$mean_circularity else 0.75
+      gt_ar <- if (!is.null(s$mean_aspect_ratio) && !is.na(s$mean_aspect_ratio)) s$mean_aspect_ratio else 1.6
+      circ_err <- abs(guess_circ - gt_circ) / 0.5 * 100
+      ar_err <- abs(guess_ar - gt_ar) / 1.5 * 100
+      spher_s <- max(0, round(100 - mean(c(circ_err, ar_err))))
+    }
+
+    valid_scores <- Filter(Negate(is.null), list(area_s, count_s, size_s, spher_s))
     overall <- round(mean(unlist(valid_scores)))
 
     diff_display <- function(guess, actual, unit = "") {
@@ -684,6 +777,35 @@ server <- function(input, output, session) {
               style = paste0("color:", score_grade(size_s)$color),
               score_grade(size_s)$label
             )))
+      )
+    }
+
+    if (!is.null(spher_s)) {
+      gt_circ_val <- if (!is.null(s$mean_circularity) && !is.na(s$mean_circularity)) s$mean_circularity else NA
+      gt_ar_val <- if (!is.null(s$mean_aspect_ratio) && !is.na(s$mean_aspect_ratio)) s$mean_aspect_ratio else NA
+
+      # Map circularity to roundedness label
+      circ_label <- if (is.na(gt_circ_val)) "\u2014"
+                    else if (gt_circ_val >= 0.88) "Well-rounded"
+                    else if (gt_circ_val >= 0.76) "Rounded"
+                    else if (gt_circ_val >= 0.62) "Sub-rounded"
+                    else if (gt_circ_val >= 0.48) "Sub-angular"
+                    else "Angular"
+
+      ar_label <- if (is.na(gt_ar_val)) "\u2014"
+                  else if (gt_ar_val <= 1.3) "High"
+                  else if (gt_ar_val <= 1.9) "Medium"
+                  else "Low"
+
+      stat_cards[[length(stat_cards) + 1]] <- div(
+        class = "col",
+        div(class = "stat-card h-100",
+            div(class = "stat-label", "Roundedness"),
+            div(class = "stat-value", style = "font-size: 18px;", circ_label),
+            div(class = "stat-diff text-muted",
+                paste0("circ=", if (!is.na(gt_circ_val)) round(gt_circ_val, 2) else "?",
+                       " AR=", if (!is.na(gt_ar_val)) round(gt_ar_val, 2) else "?"))
+        )
       )
     }
 
@@ -766,10 +888,12 @@ server <- function(input, output, session) {
     area_scores <- scores$area_score[scores$area_score >= 0]
     count_scores <- scores$count_score[scores$count_score >= 0]
     size_scores <- scores$size_score[scores$size_score >= 0]
+    spher_scores <- scores$spher_score[scores$spher_score >= 0]
 
     avg_area <- if (length(area_scores) > 0) round(mean(area_scores)) else NA
     avg_count <- if (length(count_scores) > 0) round(mean(count_scores)) else NA
     avg_size <- if (length(size_scores) > 0) round(mean(size_scores)) else NA
+    avg_spher <- if (length(spher_scores) > 0) round(mean(spher_scores)) else NA
 
     area_biases <- na.omit(scores$area_bias)
     count_biases <- na.omit(scores$count_bias)
@@ -816,14 +940,15 @@ server <- function(input, output, session) {
     plot_data <- scores |>
       mutate(attempt = row_number()) |>
       tidyr::pivot_longer(
-        cols = c(area_score, count_score, size_score),
+        cols = c(area_score, count_score, size_score, spher_score),
         names_to = "metric", values_to = "score"
       ) |>
       filter(score >= 0) |>
       mutate(metric = case_when(
         metric == "area_score" ~ "Area %",
         metric == "count_score" ~ "Count",
-        metric == "size_score" ~ "Size Dist."
+        metric == "size_score" ~ "Size Dist.",
+        metric == "spher_score" ~ "Sphericity"
       ))
 
     if (nrow(plot_data) == 0) return(NULL)
@@ -831,7 +956,8 @@ server <- function(input, output, session) {
     ggplot(plot_data, aes(x = attempt, y = score, color = metric)) +
       geom_line(linewidth = 1.2, alpha = 0.8) +
       geom_point(size = 3) +
-      scale_color_manual(values = c("Area %" = "#3498db", "Count" = "#e74c3c", "Size Dist." = "#f39c12")) +
+      scale_color_manual(values = c("Area %" = "#3498db", "Count" = "#e74c3c",
+                                    "Size Dist." = "#f39c12", "Sphericity" = "#9b59b6")) +
       scale_y_continuous(limits = c(0, 100)) +
       scale_x_continuous(breaks = scales::breaks_pretty()) +
       labs(x = "Attempt", y = "Score", color = NULL, title = "Score by Attempt") +
