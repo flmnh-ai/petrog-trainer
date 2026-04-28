@@ -28,6 +28,30 @@ size_colors <- c(
 
 area_pct_choices <- c(1, 3, 5, 7, 10, 15, 20, 25, 30, 40, 50, 55, 60)
 default_area_pct <- 10
+default_module <- "area"
+lesson_target <- 10
+strong_threshold <- 85
+review_threshold <- 60
+miss_review_delay <- 2
+practice_review_delay <- 6
+
+lesson_defs <- data.frame(
+  value = c("area", "count", "size", "sphericity", "all"),
+  title = c("Inclusion Area", "Grain Count", "Grain Size", "Grain Shape", "Full Practice"),
+  description = c(
+    "Estimate total inclusion coverage.",
+    "Estimate the number of visible inclusions.",
+    "Identify the dominant size pattern.",
+    "Practice roundedness and sphericity.",
+    "Combine every skill in one attempt."
+  ),
+  tag = c("Start here", "Focused", "Focused", "Focused", "Advanced"),
+  icon = c("chart-pie", "list-ol", "grip", "circle-half-stroke", "layer-group"),
+  stringsAsFactors = FALSE
+)
+
+sample_pool <- samples |>
+  mutate(sample_index = row_number(), enabled = TRUE)
 
 # Scoring function: 0-100 based on relative error
 calc_score <- function(guess, actual) {
@@ -284,6 +308,209 @@ app_css <- "
 }
 .perf-dot.completed { opacity: 1; }
 
+.session-nav .btn {
+  width: 34px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lesson-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 260px);
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.lesson-header h5 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.lesson-progress-meta {
+  margin-top: 2px;
+  color: #6c757d;
+  font-size: 12px;
+}
+
+.progress-track {
+  width: 100%;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e9ecef;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: #2c3e50;
+  transition: width 0.25s ease;
+}
+
+.progress-label {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  color: #495057;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.lesson-grid {
+  display: grid;
+  gap: 6px;
+}
+
+.lesson-card.btn {
+  width: 100%;
+  white-space: normal;
+  text-align: left;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  background: #fff;
+  color: #212529;
+  padding: 8px 10px;
+}
+
+.lesson-card.btn:hover {
+  border-color: #95a5a6;
+  background: #f8f9fa;
+}
+
+.lesson-card.btn.active {
+  border-color: #2c3e50;
+  background: #eef3f7;
+  box-shadow: 0 0 0 2px rgba(44, 62, 80, 0.12);
+}
+
+.lesson-card.btn.practicing .lesson-tag {
+  background: #fff3cd;
+  color: #664d03;
+}
+
+.lesson-card.btn.strong .lesson-tag {
+  background: #d1e7dd;
+  color: #0f5132;
+}
+
+.lesson-card.btn.complete .lesson-tag {
+  background: #cfe2ff;
+  color: #084298;
+}
+
+.lesson-card-active {
+  border: 1px solid #2c3e50;
+  background: #eef3f7;
+  box-shadow: 0 0 0 2px rgba(44, 62, 80, 0.12);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.lesson-card-active.practicing .lesson-tag { background: #fff3cd; color: #664d03; }
+.lesson-card-active.strong .lesson-tag { background: #d1e7dd; color: #0f5132; }
+.lesson-card-active.complete .lesson-tag { background: #cfe2ff; color: #084298; }
+
+.round-recap-skill {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+.round-recap-skill i { margin-right: 6px; }
+
+.round-recap-dims {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.round-recap-chip {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  font-size: 13px;
+}
+
+.lesson-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.lesson-title i {
+  width: 16px;
+  text-align: center;
+}
+
+.lesson-tag {
+  margin-left: auto;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #e9ecef;
+  color: #495057;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.lesson-desc {
+  margin-top: 3px;
+  color: #6c757d;
+  font-size: 11px;
+}
+
+.module-native {
+  display: none;
+}
+
+.feedback-card {
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+
+.feedback-card h6 {
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.feedback-card ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+}
+
+.result-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.result-actions .btn {
+  min-width: 130px;
+}
+
+@media (max-width: 768px) {
+  .lesson-header {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Module badge */
 .module-badge {
   display: inline-block;
@@ -302,6 +529,7 @@ app_css <- "
 
 # --- UI ---
 ui <- page_navbar(
+  id = "main_nav",
   title = "Ceramic Petrography Trainer",
   selected = "Practice",
   theme = bs_theme(
@@ -321,12 +549,16 @@ ui <- page_navbar(
       sidebar = sidebar(
         width = 300,
 
-        # Sample navigation
+        # Session controls
         div(
-          class = "d-flex justify-content-between align-items-center mb-2",
-          actionButton("prev_sample", icon("arrow-left"), class = "btn-sm btn-outline-secondary"),
+          class = "session-nav d-flex justify-content-between align-items-center mb-2",
+          actionButton("restart_lesson", icon("rotate-left"),
+                       class = "btn-sm btn-outline-secondary",
+                       title = "Restart lesson"),
           h6(textOutput("sample_label"), style = "margin:0;"),
-          actionButton("next_sample", icon("arrow-right"), class = "btn-sm btn-outline-secondary")
+          actionButton("skip_sample", icon("forward"),
+                       class = "btn-sm btn-outline-secondary",
+                       title = "Skip this question")
         ),
 
         # Sample info badges
@@ -338,16 +570,23 @@ ui <- page_navbar(
         hr(style = "margin: 8px 0;"),
 
         # Module selector
-        radioButtons("module", "Training Module",
-                     choices = c(
-                       "All Skills" = "all",
-                       "Inclusion Area" = "area",
-                       "Grain Size" = "size",
-                       "Grain Count" = "count",
-                       "Sphericity" = "sphericity"
-                     ),
-                     selected = "all",
-                     inline = TRUE),
+        div(
+          class = "sidebar-section",
+          h6("Current skill"),
+          uiOutput("lesson_cards"),
+          div(
+            class = "module-native",
+            radioButtons("module", NULL,
+                         choices = c(
+                           "Inclusion Area" = "area",
+                           "Grain Count" = "count",
+                           "Grain Size" = "size",
+                           "Grain Shape" = "sphericity",
+                           "Full Practice" = "all"
+                         ),
+                         selected = default_module)
+          )
+        ),
 
         # --- Inclusion area inputs ---
         conditionalPanel(
@@ -432,6 +671,7 @@ ui <- page_navbar(
       # Main content
       div(
         class = "main-content",
+        uiOutput("lesson_header"),
         uiOutput("image_display"),
         uiOutput("results_panel")
       )
@@ -461,19 +701,19 @@ ui <- page_navbar(
       style = "max-width: 800px;",
       h2("Ceramic Petrography Trainer"),
       p("An AI-assisted training tool for learning ceramic thin section analysis."),
-      p("Start here, then use the Practice tab to estimate inclusion abundance, grain count, size distribution, and grain shape before revealing the ground truth reference."),
+      p("Use the Practice tab to work through focused lessons, estimate one feature at a time, and then reveal the ground truth reference."),
       h4("Training Modules"),
       p("Use the module selector in the Practice tab to focus on specific skills:"),
       tags$ul(
-        tags$li(tags$strong("All Skills"), " \u2014 Practice area estimation, grain counting, and size distribution together"),
         tags$li(tags$strong("Inclusion Area"), " \u2014 Estimate what percentage of the image is occupied by inclusions (temper + aplastics)"),
-        tags$li(tags$strong("Grain Size"), " \u2014 Characterize the grain size distribution across Fine, Medium, Coarse, and Very Coarse categories"),
         tags$li(tags$strong("Grain Count"), " \u2014 Estimate the total number of visible inclusions"),
-        tags$li(tags$strong("Sphericity"), " \u2014 Assess grain roundedness and sphericity (elongation)")
+        tags$li(tags$strong("Grain Size"), " \u2014 Characterize the grain size distribution across Fine, Medium, Coarse, and Very Coarse categories"),
+        tags$li(tags$strong("Grain Shape"), " \u2014 Assess grain roundedness and sphericity (elongation)"),
+        tags$li(tags$strong("Full Practice"), " \u2014 Combine all skills in one attempt")
       ),
       h4("How to Use"),
       tags$ol(
-        tags$li("Select a training module (or use All Skills for the combined exercise)"),
+        tags$li("Select a focused lesson or use Full Practice for the combined exercise"),
         tags$li("Examine the thin section image carefully"),
         tags$li("Enter your estimates using the controls in the sidebar"),
         tags$li(tags$strong("Click 'Reveal Ground Truth'"), " to compare against the reference segmentation"),
@@ -527,22 +767,149 @@ ui <- page_navbar(
 # --- Server ---
 server <- function(input, output, session) {
 
-  session$onFlushed(function() {
-    showModal(modalDialog(
-      title = "How to use this trainer",
-      easyClose = TRUE,
-      footer = modalButton("Start Practicing"),
-      p("Estimate the thin section before revealing the reference."),
-      tags$ol(
-        tags$li("Choose a training module or use All Skills."),
-        tags$li("Inspect the image, including the 100 px scale bar."),
-        tags$li("Enter your estimates with the sidebar controls."),
-        tags$li("Click Reveal Ground Truth to compare your estimate with the reference segmentation.")
+  lesson_card_button <- function(value, prefix, selected = NULL, status = NULL) {
+    lesson <- lesson_defs[lesson_defs$value == value, ][1, ]
+    tag_text <- if (!is.null(status) && !is.null(status$tag)) status$tag else lesson$tag
+    status_class <- if (!is.null(status) && !is.null(status$class)) status$class else ""
+    actionButton(
+      inputId = paste0(prefix, "_", value),
+      label = tagList(
+        div(
+          class = "lesson-title",
+          icon(lesson$icon),
+          span(lesson$title),
+          span(class = "lesson-tag", tag_text)
+        ),
+        div(class = "lesson-desc", lesson$description)
       ),
-      p(class = "text-muted",
-        "Scores measure agreement with the current reference segmentation, not a replacement for petrographic judgment.")
+      class = paste(
+        "lesson-card",
+        status_class,
+        if (!is.null(selected) && selected == value) "active" else ""
+      )
+    )
+  }
+
+  lesson_picker <- function(prefix, selected = NULL, statuses = NULL) {
+    div(
+      class = "lesson-grid",
+      lapply(lesson_defs$value, function(value) {
+        status <- if (!is.null(statuses) && value %in% names(statuses)) statuses[[value]] else NULL
+        lesson_card_button(value, prefix, selected, status)
+      })
+    )
+  }
+
+  show_skill_picker_modal <- function(selected = default_module,
+                                       statuses = NULL,
+                                       title = "Pick a skill",
+                                       body_text = NULL,
+                                       footnote = NULL) {
+    showModal(modalDialog(
+      title = title,
+      easyClose = TRUE,
+      footer = modalButton("Cancel"),
+      if (!is.null(body_text)) p(body_text),
+      lesson_picker("intro", selected, statuses),
+      if (!is.null(footnote)) p(class = "text-muted", footnote)
     ))
+  }
+
+  session$onFlushed(function() {
+    show_skill_picker_modal(
+      selected = default_module,
+      title = "Pick a skill to start",
+      body_text = "Start with one focused skill. You can switch any time.",
+      footnote = "Inspect the image, enter your estimate, then click Reveal Ground Truth. Scores measure agreement with the current reference segmentation."
+    )
   }, once = TRUE)
+
+  build_round_summary <- function() {
+    if (rv$target <= 0 || nrow(rv$scores) < rv$target) return(NULL)
+    round_rows <- tail(rv$scores, rv$target)
+
+    dim_avg <- function(col) {
+      vals <- round_rows[[col]]
+      vals <- vals[vals >= 0]
+      if (length(vals) == 0) NA_real_ else round(mean(vals))
+    }
+
+    list(
+      module = input_value(input$module, default_module),
+      overall = round(mean(round_rows$overall)),
+      area = dim_avg("area_score"),
+      count = dim_avg("count_score"),
+      size = dim_avg("size_score"),
+      spher = dim_avg("spher_score")
+    )
+  }
+
+  weakest_dim <- function(summary) {
+    dims <- list(
+      list(score = summary$area, module = "area", title = "Inclusion Area"),
+      list(score = summary$count, module = "count", title = "Grain Count"),
+      list(score = summary$size, module = "size", title = "Grain Size"),
+      list(score = summary$spher, module = "sphericity", title = "Grain Shape")
+    )
+    dims <- Filter(function(d) !is.na(d$score), dims)
+    if (length(dims) == 0) return(NULL)
+    scores <- vapply(dims, function(d) d$score, numeric(1))
+    dims[[which.min(scores)]]
+  }
+
+  show_round_complete_modal <- function() {
+    summary <- build_round_summary()
+    if (is.null(summary)) return(NULL)
+
+    lesson <- lesson_defs[lesson_defs$value == summary$module, ][1, ]
+
+    chip <- function(label, score) {
+      span(class = "round-recap-chip", paste0(label, ": "), tags$strong(paste0(score, "/100")))
+    }
+
+    chips <- list()
+    if (!is.na(summary$area)) chips[[length(chips) + 1]] <- chip("Area", summary$area)
+    if (!is.na(summary$count)) chips[[length(chips) + 1]] <- chip("Count", summary$count)
+    if (!is.na(summary$size)) chips[[length(chips) + 1]] <- chip("Size", summary$size)
+    if (!is.na(summary$spher)) chips[[length(chips) + 1]] <- chip("Shape", summary$spher)
+
+    weakest <- weakest_dim(summary)
+    suggestion <- if (summary$overall >= strong_threshold) {
+      "Strong round — try a different skill or keep grinding."
+    } else if (!is.null(weakest) && weakest$score < strong_threshold &&
+               weakest$module != summary$module && summary$module == "all") {
+      paste0(weakest$title, " was weakest at ", weakest$score,
+             "/100. Consider focusing on that skill next.")
+    } else if (summary$overall < review_threshold) {
+      "Below the practice threshold — another round on the same skill should help."
+    } else {
+      "Solid practice — try another round or pick a new skill."
+    }
+
+    showModal(modalDialog(
+      title = tagList(icon("circle-check"), " Round complete!"),
+      easyClose = TRUE,
+      footer = tagList(
+        modalButton("Keep practicing"),
+        actionButton("round_view_perf", "View Performance",
+                     class = "btn-outline-primary",
+                     icon = icon("chart-line")),
+        actionButton("round_switch_skill", "Switch skill",
+                     class = "btn-outline-primary",
+                     icon = icon("arrow-right-arrow-left")),
+        actionButton("round_again", "Practice again",
+                     class = "btn-primary",
+                     icon = icon("rotate-right"))
+      ),
+      div(
+        class = "text-center",
+        div(class = "round-recap-skill", icon(lesson$icon), span(lesson$title)),
+        score_ring_html(summary$overall, 110),
+        div(class = "round-recap-dims mt-3", chips)
+      ),
+      p(class = "text-muted text-center mt-3", suggestion)
+    ))
+  }
 
   # Convert dominant + sorting into size distribution percentages
   guess_size_dist <- reactive({
@@ -552,9 +919,14 @@ server <- function(input, output, session) {
   # Reactive values
   rv <- reactiveValues(
     current = 1,
+    queue = integer(),
+    answered = 0L,
+    target = min(lesson_target, n_samples),
     revealed = FALSE,
     last_attempt = NULL,
-    completed = rep(FALSE, n_samples),
+    last_scored_sample = NA_integer_,
+    lesson_attempts = setNames(rep(0L, nrow(lesson_defs)), lesson_defs$value),
+    lesson_strong = setNames(rep(0L, nrow(lesson_defs)), lesson_defs$value),
     scores = data.frame(
       attempt = integer(),
       sample = integer(),
@@ -583,9 +955,130 @@ server <- function(input, output, session) {
     updateSelectInput(session, "guess_sphericity", selected = "medium")
   }
 
+  hide_reference <- function() {
+    rv$revealed <- FALSE
+    rv$last_attempt <- NULL
+  }
+
+  eligible_sample_indices <- function(module = default_module) {
+    indices <- sample_pool$sample_index[sample_pool$enabled]
+    if (length(indices) == 0) seq_len(n_samples) else indices
+  }
+
+  start_lesson <- function(module = default_module) {
+    pool <- eligible_sample_indices(module)
+    rv$queue <- sample(pool)
+    rv$answered <- 0L
+    rv$target <- min(lesson_target, length(pool))
+
+    if (length(rv$queue) > 0) {
+      rv$current <- rv$queue[1]
+      rv$queue <- rv$queue[-1]
+    }
+
+    rv$last_scored_sample <- NA_integer_
+    hide_reference()
+    reset_inputs()
+  }
+
+  next_question <- function() {
+    module <- input_value(input$module, default_module)
+    if (length(rv$queue) == 0) {
+      pool <- setdiff(eligible_sample_indices(module), rv$current)
+      if (length(pool) == 0) pool <- eligible_sample_indices(module)
+      rv$queue <- sample(pool)
+    }
+
+    if (length(rv$queue) > 0) {
+      rv$current <- rv$queue[1]
+      rv$queue <- rv$queue[-1]
+    }
+
+    rv$last_scored_sample <- NA_integer_
+    hide_reference()
+    reset_inputs()
+  }
+
+  skip_question <- function() {
+    module <- input_value(input$module, default_module)
+    pool <- eligible_sample_indices(module)
+    if (length(setdiff(pool, rv$current)) > 0) {
+      rv$queue <- c(rv$queue[rv$queue != rv$current], rv$current)
+    }
+    next_question()
+  }
+
+  schedule_review <- function(attempt) {
+    module <- if (attempt$module %in% names(rv$lesson_attempts)) attempt$module else default_module
+
+    rv$answered <- rv$answered + 1L
+
+    attempts <- rv$lesson_attempts
+    attempts[[module]] <- attempts[[module]] + 1L
+    rv$lesson_attempts <- attempts
+
+    if (attempt$overall >= strong_threshold) {
+      strong <- rv$lesson_strong
+      strong[[module]] <- strong[[module]] + 1L
+      rv$lesson_strong <- strong
+    }
+
+    rv$queue <- rv$queue[rv$queue != attempt$sample_index]
+    if (attempt$overall < strong_threshold) {
+      delay <- if (attempt$overall < review_threshold) miss_review_delay else practice_review_delay
+      rv$queue <- append(rv$queue, attempt$sample_index, after = min(delay, length(rv$queue)))
+    }
+  }
+
+  current_question_number <- function() {
+    if (rv$target <= 0) return(0L)
+    question <- rv$answered + if (isTRUE(rv$revealed)) 0L else 1L
+    max(1L, min(question, rv$target))
+  }
+
+  lesson_statuses <- function() {
+    statuses <- setNames(vector("list", length(lesson_defs$value)), lesson_defs$value)
+    for (value in lesson_defs$value) {
+      lesson <- lesson_defs[lesson_defs$value == value, ][1, ]
+      attempts <- rv$lesson_attempts[[value]]
+      strong <- rv$lesson_strong[[value]]
+
+      if (attempts == 0) {
+        statuses[[value]] <- list(tag = lesson$tag, class = "")
+      } else if (strong >= 3) {
+        statuses[[value]] <- list(tag = "Strong", class = "strong")
+      } else if (attempts >= lesson_target) {
+        statuses[[value]] <- list(tag = "Complete", class = "complete")
+      } else {
+        statuses[[value]] <- list(tag = paste0(attempts, "/", lesson_target), class = "practicing")
+      }
+    }
+    statuses
+  }
+
+  select_module <- function(module) {
+    updateRadioButtons(session, "module", selected = module)
+    start_lesson(module)
+  }
+
+  isolate(start_lesson(default_module))
+
+  for (value in lesson_defs$value) {
+    local({
+      module_value <- value
+      observeEvent(input[[paste0("lesson_", module_value)]], {
+        select_module(module_value)
+      })
+      observeEvent(input[[paste0("intro_", module_value)]], {
+        select_module(module_value)
+        removeModal()
+      })
+    })
+  }
+
   build_attempt <- function(sample_index) {
     s <- samples[sample_index, ]
-    mod <- input_value(input$module, "all")
+    mod <- input_value(input$module, default_module)
     guess_pct <- input_value(input$guess_pct, default_area_pct)
     guess_count <- input_value(input$guess_count, 50)
     guess_dominant <- input_value(input$guess_dominant, "Medium")
@@ -679,35 +1172,51 @@ server <- function(input, output, session) {
     )
   }
 
-  # Sample navigation
-  observeEvent(input$next_sample, {
-    rv$current <- min(rv$current + 1, n_samples)
-    rv$revealed <- FALSE
-    rv$last_attempt <- NULL
-    reset_inputs()
+  # Session navigation
+  observeEvent(input$restart_lesson, {
+    start_lesson(input_value(input$module, default_module))
   })
 
-  observeEvent(input$prev_sample, {
-    rv$current <- max(rv$current - 1, 1)
-    rv$revealed <- FALSE
-    rv$last_attempt <- NULL
-    reset_inputs()
+  observeEvent(input$skip_sample, {
+    skip_question()
   })
 
   observeEvent(input$reset, {
-    rv$revealed <- FALSE
-    rv$last_attempt <- NULL
+    hide_reference()
     reset_inputs()
   })
 
-  observeEvent(input$reveal, {
-    attempt <- build_attempt(rv$current)
-    attempt$attempt <- nrow(rv$scores) + 1
+  observeEvent(input$try_again_result, {
+    hide_reference()
+  })
 
+  observeEvent(input$next_result, {
+    next_question()
+  })
+
+  observeEvent(input$reveal, {
+    if (isTRUE(rv$revealed)) return(NULL)
+
+    attempt <- build_attempt(rv$current)
+
+    already_scored <- !is.na(rv$last_scored_sample) &&
+      rv$last_scored_sample == rv$current
+    if (already_scored) {
+      rv$last_attempt <- attempt
+      rv$revealed <- TRUE
+      return(NULL)
+    }
+
+    attempt$attempt <- nrow(rv$scores) + 1
     rv$last_attempt <- attempt
     rv$revealed <- TRUE
-    rv$completed[rv$current] <- TRUE
     rv$scores <- rbind(rv$scores, attempt_to_row(attempt))
+    rv$last_scored_sample <- rv$current
+    schedule_review(attempt)
+
+    if (rv$target > 0 && rv$answered == rv$target) {
+      show_round_complete_modal()
+    }
   })
 
   shape_icon <- function(kind) {
@@ -797,8 +1306,98 @@ server <- function(input, output, session) {
   })
 
   # Outputs
+  output$lesson_cards <- renderUI({
+    module <- input$module %||% default_module
+    lesson <- lesson_defs[lesson_defs$value == module, ][1, ]
+    statuses <- lesson_statuses()
+    status <- statuses[[module]]
+    status_class <- if (!is.null(status$class) && nchar(status$class) > 0) status$class else ""
+    tag_text <- if (!is.null(status$tag)) status$tag else lesson$tag
+
+    tagList(
+      div(
+        class = paste("lesson-card-active", status_class),
+        div(
+          class = "lesson-title",
+          icon(lesson$icon),
+          span(lesson$title),
+          span(class = "lesson-tag", tag_text)
+        ),
+        div(class = "lesson-desc", lesson$description)
+      ),
+      actionButton(
+        "switch_skill", "Switch skill",
+        class = "btn-sm btn-outline-secondary w-100 mt-2",
+        icon = icon("arrow-right-arrow-left")
+      )
+    )
+  })
+
+  observeEvent(input$switch_skill, {
+    show_skill_picker_modal(
+      selected = input$module %||% default_module,
+      statuses = lesson_statuses(),
+      title = "Switch skill",
+      body_text = "Pick a different skill to practice."
+    )
+  })
+
+  observeEvent(input$round_again, {
+    removeModal()
+    start_lesson(input_value(input$module, default_module))
+  })
+
+  observeEvent(input$round_switch_skill, {
+    show_skill_picker_modal(
+      selected = input$module %||% default_module,
+      statuses = lesson_statuses(),
+      title = "Switch skill",
+      body_text = "Pick a different skill to practice."
+    )
+  })
+
+  observeEvent(input$round_view_perf, {
+    removeModal()
+    nav_select("main_nav", selected = "Performance", session = session)
+  })
+
   output$sample_label <- renderText({
-    paste0(rv$current, " / ", n_samples)
+    if (rv$answered >= rv$target && !isTRUE(rv$revealed)) {
+      "Review"
+    } else {
+      paste0("Q ", current_question_number(), " / ", rv$target)
+    }
+  })
+
+  output$lesson_header <- renderUI({
+    module <- input_value(input$module, default_module)
+    lesson <- lesson_defs[lesson_defs$value == module, ][1, ]
+    answered <- min(rv$answered, rv$target)
+    progress <- if (rv$target > 0) round(answered / rv$target * 100) else 0
+    progress_text <- if (rv$answered >= rv$target && !isTRUE(rv$revealed)) {
+      "Review round"
+    } else {
+      paste0("Question ", current_question_number(), " of ", rv$target)
+    }
+
+    div(
+      class = "lesson-header",
+      div(
+        h5(tagList(icon(lesson$icon), " ", lesson$title)),
+        div(class = "lesson-progress-meta", progress_text)
+      ),
+      div(
+        div(
+          class = "progress-label",
+          span("Round progress"),
+          span(paste0(progress, "%"))
+        ),
+        div(
+          class = "progress-track",
+          div(class = "progress-fill", style = paste0("width:", progress, "%;"))
+        )
+      )
+    )
   })
 
   # Sample info badge (sample name, fabric type, polarization)
@@ -846,22 +1445,13 @@ server <- function(input, output, session) {
 
   # Performance dots in sidebar
   output$perf_dots <- renderUI({
-    dots <- lapply(seq_len(n_samples), function(i) {
-      score_row <- rv$scores[rv$scores$sample == i, ]
-      if (nrow(score_row) > 0) {
-        best <- max(score_row$overall)
-        grade <- score_grade(best)
-        tags$span(
-          class = paste("perf-dot completed", if (i == rv$current) "border border-dark" else ""),
-          style = paste0("background:", grade$color, ";"),
-          title = paste0("Sample ", i, ": ", best)
-        )
-      } else {
-        tags$span(
-          class = paste("perf-dot", if (i == rv$current) "border border-dark" else ""),
-          style = "background:#95a5a6;"
-        )
-      }
+    dots <- lapply(seq_len(rv$target), function(i) {
+      completed <- i <= rv$answered
+      tags$span(
+        class = paste("perf-dot", if (completed) "completed" else ""),
+        style = paste0("background:", if (completed) "#2c3e50" else "#95a5a6", ";"),
+        title = paste0("Question ", i)
+      )
     })
     div(class = "text-center", dots)
   })
@@ -990,6 +1580,95 @@ server <- function(input, output, session) {
       )
     }
 
+    feedback <- c(paste0("Agreement score: ", overall, "/100."))
+
+    if (!is.null(area_s)) {
+      area_diff <- guess_pct - gt_pct
+      feedback <- c(
+        feedback,
+        if (abs(area_diff) <= 2) {
+          "Area estimate is close to the reference."
+        } else if (area_diff > 0) {
+          paste0("You overestimated inclusion area by ", round(abs(area_diff), 1), "%.")
+        } else {
+          paste0("You underestimated inclusion area by ", round(abs(area_diff), 1), "%.")
+        }
+      )
+      if (area_s < strong_threshold) {
+        feedback <- c(
+          feedback,
+          if (area_diff > 0) {
+            "Area cue: separate the clay matrix from inclusion-rich patches before moving the slider."
+          } else {
+            "Area cue: sweep for fine bright grains before settling on the final percentage."
+          }
+        )
+      }
+    }
+
+    if (!is.null(count_s)) {
+      count_diff <- guess_count - gt_count
+      feedback <- c(
+        feedback,
+        if (abs(count_diff) <= 10) {
+          "Grain count is close to the reference."
+        } else if (count_diff > 0) {
+          paste0("You overcounted by about ", round(abs(count_diff)), " inclusions.")
+        } else {
+          paste0("You undercounted by about ", round(abs(count_diff)), " inclusions.")
+        }
+      )
+      if (count_s < strong_threshold) {
+        feedback <- c(
+          feedback,
+          if (count_diff > 0) {
+            "Count cue: avoid splitting one elongated grain into several inclusions."
+          } else {
+            "Count cue: scan the image in rows so isolated grains are less likely to be missed."
+          }
+        )
+      }
+    }
+
+    if (!is.null(size_s)) {
+      size_cats <- c("Fine", "Medium", "Coarse", "Very Coarse")
+      guess_dom <- size_cats[which.max(attempt$guess_size)]
+      gt_dom <- size_cats[which.max(attempt$gt_size)]
+      feedback <- c(
+        feedback,
+        if (guess_dom == gt_dom) {
+          paste0("Dominant size class matches: ", gt_dom, ".")
+        } else {
+          paste0("Reference is mostly ", gt_dom, "; your estimate emphasized ", guess_dom, ".")
+        }
+      )
+      if (size_s < strong_threshold) {
+        feedback <- c(
+          feedback,
+          "Size cue: prioritize the size class that repeats across the field, not a single standout grain."
+        )
+      }
+    }
+
+    if (!is.null(spher_s)) {
+      feedback <- c(
+        feedback,
+        paste0("Shape reference: ", attempt$circ_label, " with ", attempt$ar_label, " sphericity.")
+      )
+      if (spher_s < strong_threshold) {
+        feedback <- c(
+          feedback,
+          "Shape cue: judge the larger grains first; small matrix grains can pull the aggregate reference."
+        )
+      }
+    }
+
+    feedback_panel <- div(
+      class = "feedback-card",
+      h6("Feedback"),
+      tags$ul(lapply(feedback, tags$li))
+    )
+
     # Build stat cards based on active module
     stat_cards <- list()
 
@@ -1060,8 +1739,18 @@ server <- function(input, output, session) {
 
     div(
       class = "mt-2 fade-in",
+      feedback_panel,
       div(class = "row g-2 mb-2", stat_cards),
-      size_chart
+      size_chart,
+      div(
+        class = "result-actions",
+        actionButton("try_again_result", "Try Again",
+                     class = "btn-outline-secondary",
+                     icon = icon("rotate-left")),
+        actionButton("next_result", "Next Question",
+                     class = "btn-primary",
+                     icon = icon("arrow-right"))
+      )
     )
   })
 
@@ -1150,24 +1839,31 @@ server <- function(input, output, session) {
                       else if (mean_count_bias > 0) paste0("overcounting by ~", round(abs(mean_count_bias)))
                       else paste0("undercounting by ~", round(abs(mean_count_bias)))
 
+    score_text <- function(score) if (!is.na(score)) paste0(score, "/100") else "\u2014"
+
     div(
-      class = "row g-3 mt-3",
-      div(class = "col-md-3 text-center", score_ring_html(avg_overall)),
-      div(class = "col-md-3",
-          div(class = "stat-card",
-              div(class = "stat-label", "Area Estimation"),
-              div(class = "stat-value", if (!is.na(avg_area)) paste0(avg_area, "%") else "\u2014"),
+      class = "row row-cols-2 row-cols-md-5 g-3 mt-3",
+      div(class = "col text-center", score_ring_html(avg_overall)),
+      div(class = "col",
+          div(class = "stat-card h-100",
+              div(class = "stat-label", "Area Score"),
+              div(class = "stat-value", score_text(avg_area)),
               div(class = "stat-diff text-muted", area_tendency))),
-      div(class = "col-md-3",
-          div(class = "stat-card",
-              div(class = "stat-label", "Count Estimation"),
-              div(class = "stat-value", if (!is.na(avg_count)) paste0(avg_count, "%") else "\u2014"),
+      div(class = "col",
+          div(class = "stat-card h-100",
+              div(class = "stat-label", "Count Score"),
+              div(class = "stat-value", score_text(avg_count)),
               div(class = "stat-diff text-muted", count_tendency))),
-      div(class = "col-md-3",
-          div(class = "stat-card",
-              div(class = "stat-label", "Size Distribution"),
-              div(class = "stat-value", if (!is.na(avg_size)) paste0(avg_size, "%") else "\u2014"),
-              div(class = "stat-diff text-muted", paste0(nrow(scores), " attempts"))))
+      div(class = "col",
+          div(class = "stat-card h-100",
+              div(class = "stat-label", "Size Score"),
+              div(class = "stat-value", score_text(avg_size)),
+              div(class = "stat-diff text-muted", paste0(length(size_scores), " attempts")))),
+      div(class = "col",
+          div(class = "stat-card h-100",
+              div(class = "stat-label", "Shape Score"),
+              div(class = "stat-value", score_text(avg_spher)),
+              div(class = "stat-diff text-muted", paste0(length(spher_scores), " attempts"))))
     )
   })
 
