@@ -26,12 +26,61 @@ size_colors <- c(
   "Very Coarse" = "#e74c3c"   # red
 )
 
+area_pct_choices <- c(1, 3, 5, 7, 10, 15, 20, 25, 30, 40, 50, 55, 60)
+default_area_pct <- 10
+
 # Scoring function: 0-100 based on relative error
 calc_score <- function(guess, actual) {
   if (is.null(guess) || is.na(guess)) return(0)
   if (actual == 0) return(if (guess == 0) 100 else 0)
   error_pct <- abs(guess - actual) / actual * 100
   max(0, round(100 - error_pct))
+}
+
+size_dist_from_guess <- function(dom, sorting, sec) {
+  cats <- c("Fine", "Medium", "Coarse", "Very Coarse")
+  pcts <- setNames(rep(0, length(cats)), cats)
+
+  if (is.null(dom) || is.na(dom) || !dom %in% cats) dom <- "Medium"
+  if (is.null(sorting) || is.na(sorting)) sorting <- "moderate"
+  if (is.null(sec) || is.na(sec) || !sec %in% cats) sec <- "Coarse"
+
+  if (sorting == "well") {
+    pcts[dom] <- 70
+    idx <- which(cats == dom)
+    neighbors <- cats[max(1, idx - 1):min(4, idx + 1)]
+    neighbors <- setdiff(neighbors, dom)
+    if (length(neighbors) > 0) {
+      pcts[neighbors] <- 30 / length(neighbors)
+    } else {
+      pcts[dom] <- 100
+    }
+  } else if (sorting == "moderate") {
+    pcts[dom] <- 45
+    idx <- which(cats == dom)
+    neighbors <- cats[max(1, idx - 1):min(4, idx + 1)]
+    neighbors <- setdiff(neighbors, dom)
+    remaining <- setdiff(cats, c(dom, neighbors))
+    if (length(neighbors) > 0) pcts[neighbors] <- 35 / length(neighbors)
+    if (length(remaining) > 0) pcts[remaining] <- 20 / length(remaining)
+  } else if (sorting == "poor") {
+    pcts[] <- 25
+  } else if (sorting == "bimodal") {
+    if (sec == dom) {
+      idx <- which(cats == dom)
+      candidates <- c(idx + 1, idx - 1, idx + 2, idx - 2)
+      candidates <- candidates[candidates >= 1 & candidates <= length(cats)]
+      sec <- cats[candidates[1]]
+    }
+    pcts[dom] <- 40
+    pcts[sec] <- 40
+    remaining <- setdiff(cats, c(dom, sec))
+    if (length(remaining) > 0) pcts[remaining] <- 20 / length(remaining)
+  } else {
+    pcts <- size_dist_from_guess(dom, "moderate", sec)
+  }
+
+  as.numeric(pcts)
 }
 
 score_grade <- function(score) {
@@ -72,6 +121,115 @@ app_css <- "
   max-height: calc(100vh - 300px);
   width: 100%;
   object-fit: contain;
+}
+
+.image-frame {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+
+.scale-overlay {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.62);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+.scale-line {
+  width: 100px;
+  height: 8px;
+  border-left: 2px solid #fff;
+  border-right: 2px solid #fff;
+  border-bottom: 3px solid #fff;
+  margin-bottom: 5px;
+}
+
+.area-reference {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 8px;
+  align-items: center;
+  margin-top: 6px;
+  padding: 6px;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  background: #f8f9fa;
+}
+
+.area-reference img {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  border: 1px solid #adb5bd;
+  background: #fff;
+}
+
+.area-reference-title {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.area-reference-note {
+  font-size: 11px;
+  color: #6c757d;
+}
+
+.size-legend-large {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  align-items: center;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 14px;
+}
+
+.size-legend-title {
+  font-weight: 700;
+  margin-right: 2px;
+}
+
+.size-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.size-legend-swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  display: inline-block;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+.shape-guide-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 10px;
+  margin: 8px 0 16px;
+}
+
+.shape-guide-item {
+  text-align: center;
+  font-size: 12px;
+}
+
+.shape-guide-item svg {
+  display: block;
+  width: 88px;
+  height: 58px;
+  margin: 0 auto 4px;
 }
 
 /* Score ring */
@@ -126,43 +284,6 @@ app_css <- "
 }
 .perf-dot.completed { opacity: 1; }
 
-/* Comparison chart selector */
-.pct-chart-strip {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 3px;
-  justify-content: center;
-}
-.pct-chart-btn {
-  width: 48px;
-  padding: 2px;
-  border: 2px solid transparent;
-  border-radius: 6px;
-  background: #fff;
-  cursor: pointer;
-  text-align: center;
-  transition: border-color 0.15s, box-shadow 0.15s;
-}
-.pct-chart-btn:hover {
-  border-color: #95a5a6;
-}
-.pct-chart-btn.selected {
-  border-color: #2c3e50;
-  box-shadow: 0 0 0 2px rgba(44,62,80,0.2);
-}
-.pct-chart-btn img {
-  width: 100%;
-  height: auto;
-  display: block;
-  border-radius: 3px;
-}
-.pct-chart-btn .pct-label {
-  font-size: 9px;
-  font-weight: 600;
-  margin-top: 1px;
-  color: #555;
-}
-
 /* Module badge */
 .module-badge {
   display: inline-block;
@@ -179,20 +300,10 @@ app_css <- "
 .sidebar-section h6 { margin-bottom: 4px; font-size: 13px; }
 "
 
-# --- JS ---
-app_js <- "
-// Comparison chart click handler
-$(document).on('click', '.pct-chart-btn', function() {
-  var val = parseInt($(this).data('pct'));
-  Shiny.setInputValue('guess_pct', val);
-  $('.pct-chart-btn').removeClass('selected');
-  $(this).addClass('selected');
-});
-"
-
 # --- UI ---
 ui <- page_navbar(
   title = "Ceramic Petrography Trainer",
+  selected = "Practice",
   theme = bs_theme(
     version = 5,
     bootswatch = "flatly",
@@ -200,8 +311,7 @@ ui <- page_navbar(
   ),
 
   header = tags$head(
-    tags$style(HTML(app_css)),
-    tags$script(HTML(app_js))
+    tags$style(HTML(app_css))
   ),
 
   # --- Practice tab with module selector ---
@@ -244,22 +354,10 @@ ui <- page_navbar(
           condition = "input.module == 'all' || input.module == 'area'",
           div(
             class = "sidebar-section",
-            h6("Inclusion area (click closest match)"),
-            div(
-              class = "pct-chart-strip mb-1",
-              lapply(c(1, 3, 5, 7, 10, 15, 20, 25, 30, 40, 50), function(pct) {
-                div(
-                  class = "pct-chart-btn",
-                  `data-pct` = pct,
-                  tags$img(src = sprintf("images/comparison/pct_%02d.png", pct),
-                           alt = paste0(pct, "%")),
-                  div(class = "pct-label", paste0(pct, "%"))
-                )
-              })
-            ),
-            div(class = "text-center",
-                tags$small(class = "text-muted", "Selected: "),
-                tags$small(tags$strong(textOutput("selected_pct_display", inline = TRUE))))
+            sliderInput("guess_pct", "Estimated inclusion area",
+                        min = min(area_pct_choices), max = max(area_pct_choices),
+                        value = default_area_pct, step = 1, post = "%"),
+            uiOutput("area_reference")
           )
         ),
 
@@ -314,13 +412,16 @@ ui <- page_navbar(
                         choices = c("Low (elongated)" = "low",
                                     "Medium" = "medium",
                                     "High (equant)" = "high"),
-                        selected = "medium")
+                        selected = "medium"),
+            actionButton("shape_guide", "Shape Guide",
+                         class = "btn-outline-secondary btn-sm w-100",
+                         icon = icon("circle-info"))
           )
         ),
 
         hr(style = "margin: 8px 0;"),
 
-        actionButton("reveal", "Show AI Analysis",
+        actionButton("reveal", "Reveal Ground Truth",
                      class = "btn-primary w-100 mt-1",
                      icon = icon("eye")),
         actionButton("reset", "Reset & Try Again",
@@ -360,6 +461,7 @@ ui <- page_navbar(
       style = "max-width: 800px;",
       h2("Ceramic Petrography Trainer"),
       p("An AI-assisted training tool for learning ceramic thin section analysis."),
+      p("Start here, then use the Practice tab to estimate inclusion abundance, grain count, size distribution, and grain shape before revealing the ground truth reference."),
       h4("Training Modules"),
       p("Use the module selector in the Practice tab to focus on specific skills:"),
       tags$ul(
@@ -374,13 +476,15 @@ ui <- page_navbar(
         tags$li("Select a training module (or use All Skills for the combined exercise)"),
         tags$li("Examine the thin section image carefully"),
         tags$li("Enter your estimates using the controls in the sidebar"),
-        tags$li(tags$strong("Click 'Show AI Analysis'"), " to compare against AI-detected ground truth"),
+        tags$li(tags$strong("Click 'Reveal Ground Truth'"), " to compare against the reference segmentation"),
         tags$li("Review your score and the color-coded overlay to calibrate your visual estimation"),
         tags$li("Navigate between samples to practice with different compositions"),
         tags$li("Check the Performance tab to see your trends and biases")
       ),
-      h4("Color-Coded AI Overlay"),
-      p("When you reveal the AI analysis, inclusions are color-coded by size class:"),
+      h4("Image Scale"),
+      p("Each image includes a 100 px scale bar. This is a pixel reference for comparing grains within this demo; converting it to microns requires microscope calibration metadata."),
+      h4("Color-Coded Ground Truth Overlay"),
+      p("When you reveal the ground truth, inclusions are color-coded by size class:"),
       tags$div(
         class = "d-flex gap-3 mb-3",
         tags$span(style = "color: #3498db; font-weight: 600;", "\u25A0 Fine"),
@@ -390,10 +494,13 @@ ui <- page_navbar(
       ),
       p("These colors match the bar chart showing grain size distribution, so you can see exactly",
         "which detected grains fall into which size class."),
+      h4("Current Shape Metric"),
+      p("Roundedness is currently compared with mean circularity, and sphericity is compared with mean aspect ratio across segmented grains.",
+        "This is an aggregate reference metric for the app, not a replacement for petrographic description by temper type."),
       h4("About the Images"),
       p("These are cross-polarized light (XPL) photomicrographs of ceramic thin sections from 5 fabric types (A, C, D, E, W)",
         "across multiple samples. Inclusions (temper and natural aplastics) appear as bright, colorful grains in the clay matrix.",
-        "The AI analysis uses a segmentation model (RF-DETR Seg) that detects individual inclusion boundaries and measures",
+        "The reference segmentation uses a model (RF-DETR Seg) that detects individual inclusion boundaries and measures",
         "their morphological properties (area, circularity, aspect ratio, solidity).",
         "All images are interior views \u2014 tiles near the sample edge have been excluded to avoid artifacts."),
       h4("Size Categories"),
@@ -420,52 +527,36 @@ ui <- page_navbar(
 # --- Server ---
 server <- function(input, output, session) {
 
+  session$onFlushed(function() {
+    showModal(modalDialog(
+      title = "How to use this trainer",
+      easyClose = TRUE,
+      footer = modalButton("Start Practicing"),
+      p("Estimate the thin section before revealing the reference."),
+      tags$ol(
+        tags$li("Choose a training module or use All Skills."),
+        tags$li("Inspect the image, including the 100 px scale bar."),
+        tags$li("Enter your estimates with the sidebar controls."),
+        tags$li("Click Reveal Ground Truth to compare your estimate with the reference segmentation.")
+      ),
+      p(class = "text-muted",
+        "Scores measure agreement with the current reference segmentation, not a replacement for petrographic judgment.")
+    ))
+  }, once = TRUE)
+
   # Convert dominant + sorting into size distribution percentages
   guess_size_dist <- reactive({
-    dom <- input$guess_dominant
-    sorting <- input$guess_sorting
-    sec <- input$guess_secondary
-
-    cats <- c("Fine", "Medium", "Coarse", "Very Coarse")
-    pcts <- setNames(rep(0, 4), cats)
-
-    if (sorting == "well") {
-      pcts[dom] <- 70
-      idx <- which(cats == dom)
-      neighbors <- cats[max(1, idx - 1):min(4, idx + 1)]
-      neighbors <- setdiff(neighbors, dom)
-      if (length(neighbors) > 0) {
-        pcts[neighbors] <- 30 / length(neighbors)
-      } else {
-        pcts[dom] <- 100
-      }
-    } else if (sorting == "moderate") {
-      pcts[dom] <- 45
-      idx <- which(cats == dom)
-      neighbors <- cats[max(1, idx - 1):min(4, idx + 1)]
-      neighbors <- setdiff(neighbors, dom)
-      remaining <- setdiff(cats, c(dom, neighbors))
-      if (length(neighbors) > 0) pcts[neighbors] <- 35 / length(neighbors)
-      if (length(remaining) > 0) pcts[remaining] <- 20 / length(remaining)
-    } else if (sorting == "poor") {
-      pcts[] <- 25
-    } else if (sorting == "bimodal") {
-      if (is.null(sec) || sec == dom) sec <- cats[min(4, which(cats == dom) + 2)]
-      pcts[dom] <- 40
-      pcts[sec] <- 40
-      remaining <- setdiff(cats, c(dom, sec))
-      if (length(remaining) > 0) pcts[remaining] <- 20 / length(remaining)
-    }
-
-    as.numeric(pcts)
+    size_dist_from_guess(input$guess_dominant, input$guess_sorting, input$guess_secondary)
   })
 
   # Reactive values
   rv <- reactiveValues(
     current = 1,
     revealed = FALSE,
+    last_attempt = NULL,
     completed = rep(FALSE, n_samples),
     scores = data.frame(
+      attempt = integer(),
       sample = integer(),
       module = character(),
       area_score = numeric(),
@@ -478,82 +569,222 @@ server <- function(input, output, session) {
     )
   )
 
+  input_value <- function(x, default) {
+    if (is.null(x) || length(x) == 0 || is.na(x[[1]])) default else x[[1]]
+  }
+
+  reset_inputs <- function() {
+    updateSliderInput(session, "guess_pct", value = default_area_pct)
+    updateSliderInput(session, "guess_count", value = 50)
+    updateSelectInput(session, "guess_dominant", selected = "Medium")
+    updateSelectInput(session, "guess_sorting", selected = "moderate")
+    updateSelectInput(session, "guess_secondary", selected = "Coarse")
+    updateSelectInput(session, "guess_roundedness", selected = "subrounded")
+    updateSelectInput(session, "guess_sphericity", selected = "medium")
+  }
+
+  build_attempt <- function(sample_index) {
+    s <- samples[sample_index, ]
+    mod <- input_value(input$module, "all")
+    guess_pct <- input_value(input$guess_pct, default_area_pct)
+    guess_count <- input_value(input$guess_count, 50)
+    guess_dominant <- input_value(input$guess_dominant, "Medium")
+    guess_sorting <- input_value(input$guess_sorting, "moderate")
+    guess_secondary <- input_value(input$guess_secondary, "Coarse")
+    guess_roundedness <- input_value(input$guess_roundedness, "subrounded")
+    guess_sphericity <- input_value(input$guess_sphericity, "medium")
+
+    gt_pct <- s$inclusion_pct
+    gt_count <- s$n_inclusions
+    gt_size <- c(s$Fine_pct, s$Medium_pct, s$Coarse_pct, s$`Very Coarse_pct`)
+    guess_size <- size_dist_from_guess(guess_dominant, guess_sorting, guess_secondary)
+
+    area_s <- if (mod %in% c("all", "area")) calc_score(guess_pct, gt_pct) else NA_real_
+    count_s <- if (mod %in% c("all", "count")) calc_score(guess_count, gt_count) else NA_real_
+
+    size_s <- NA_real_
+    if (mod %in% c("all", "size")) {
+      size_mae <- mean(abs(guess_size - gt_size))
+      size_s <- max(0, round(100 - size_mae * 2))
+    }
+
+    gt_circ_val <- if (!is.null(s$mean_circularity) && !is.na(s$mean_circularity)) s$mean_circularity else NA_real_
+    gt_ar_val <- if (!is.null(s$mean_aspect_ratio) && !is.na(s$mean_aspect_ratio)) s$mean_aspect_ratio else NA_real_
+
+    spher_s <- NA_real_
+    if (mod %in% c("all", "sphericity")) {
+      round_map <- c(angular = 0.4, subangular = 0.55, subrounded = 0.7,
+                     rounded = 0.82, wellrounded = 0.92)
+      spher_map <- c(low = 2.5, medium = 1.6, high = 1.15)
+      guess_circ <- round_map[guess_roundedness]
+      guess_ar <- spher_map[guess_sphericity]
+      gt_circ <- if (!is.na(gt_circ_val)) gt_circ_val else 0.75
+      gt_ar <- if (!is.na(gt_ar_val)) gt_ar_val else 1.6
+      circ_err <- abs(guess_circ - gt_circ) / 0.5 * 100
+      ar_err <- abs(guess_ar - gt_ar) / 1.5 * 100
+      spher_s <- max(0, round(100 - mean(c(circ_err, ar_err))))
+    }
+
+    valid_scores <- c(area_s, count_s, size_s, spher_s)
+    valid_scores <- valid_scores[!is.na(valid_scores)]
+    overall <- if (length(valid_scores) > 0) round(mean(valid_scores)) else 0
+
+    circ_label <- if (is.na(gt_circ_val)) "-"
+                  else if (gt_circ_val >= 0.88) "Well-rounded"
+                  else if (gt_circ_val >= 0.76) "Rounded"
+                  else if (gt_circ_val >= 0.62) "Sub-rounded"
+                  else if (gt_circ_val >= 0.48) "Sub-angular"
+                  else "Angular"
+
+    ar_label <- if (is.na(gt_ar_val)) "-"
+                else if (gt_ar_val <= 1.3) "High"
+                else if (gt_ar_val <= 1.9) "Medium"
+                else "Low"
+
+    list(
+      sample_index = sample_index,
+      sample = s,
+      module = mod,
+      guess_pct = guess_pct,
+      guess_count = guess_count,
+      guess_size = guess_size,
+      gt_size = gt_size,
+      area_score = area_s,
+      count_score = count_s,
+      size_score = size_s,
+      spher_score = spher_s,
+      overall = overall,
+      area_bias = if (!is.na(area_s)) guess_pct - gt_pct else NA_real_,
+      count_bias = if (!is.na(count_s)) guess_count - gt_count else NA_real_,
+      circ_label = circ_label,
+      ar_label = ar_label,
+      gt_circ = gt_circ_val,
+      gt_ar = gt_ar_val
+    )
+  }
+
+  attempt_to_row <- function(attempt) {
+    data.frame(
+      attempt = attempt$attempt,
+      sample = attempt$sample_index,
+      module = attempt$module,
+      area_score = ifelse(is.na(attempt$area_score), -1, attempt$area_score),
+      count_score = ifelse(is.na(attempt$count_score), -1, attempt$count_score),
+      size_score = ifelse(is.na(attempt$size_score), -1, attempt$size_score),
+      spher_score = ifelse(is.na(attempt$spher_score), -1, attempt$spher_score),
+      overall = attempt$overall,
+      area_bias = attempt$area_bias,
+      count_bias = attempt$count_bias,
+      stringsAsFactors = FALSE
+    )
+  }
+
   # Sample navigation
   observeEvent(input$next_sample, {
     rv$current <- min(rv$current + 1, n_samples)
     rv$revealed <- FALSE
+    rv$last_attempt <- NULL
+    reset_inputs()
   })
 
   observeEvent(input$prev_sample, {
     rv$current <- max(rv$current - 1, 1)
     rv$revealed <- FALSE
+    rv$last_attempt <- NULL
+    reset_inputs()
   })
 
   observeEvent(input$reset, {
     rv$revealed <- FALSE
+    rv$last_attempt <- NULL
+    reset_inputs()
   })
 
   observeEvent(input$reveal, {
+    attempt <- build_attempt(rv$current)
+    attempt$attempt <- nrow(rv$scores) + 1
+
+    rv$last_attempt <- attempt
     rv$revealed <- TRUE
     rv$completed[rv$current] <- TRUE
+    rv$scores <- rbind(rv$scores, attempt_to_row(attempt))
+  })
 
-    s <- samples[rv$current, ]
-    mod <- input$module
-
-    # Calculate scores based on active module
-    gp <- input$guess_pct %||% 0
-    gc <- input$guess_count %||% 0
-    area_s <- if (mod %in% c("all", "area")) calc_score(gp, s$inclusion_pct) else NA
-    count_s <- if (mod %in% c("all", "count")) calc_score(gc, s$n_inclusions) else NA
-
-    size_s <- NA
-    if (mod %in% c("all", "size")) {
-      gt_size <- c(s$Fine_pct, s$Medium_pct, s$Coarse_pct, s$`Very Coarse_pct`)
-      gu_size <- guess_size_dist()
-      size_mae <- mean(abs(gu_size - gt_size))
-      size_s <- max(0, round(100 - size_mae * 2))
-    }
-
-    # Sphericity scoring: compare roundedness + sphericity guesses to AI morphology
-    spher_s <- NA
-    if (mod %in% c("all", "sphericity")) {
-      # Map roundedness guess to circularity range
-      round_map <- c(angular = 0.4, subangular = 0.55, subrounded = 0.7,
-                     rounded = 0.82, wellrounded = 0.92)
-      guess_circ <- round_map[input$guess_roundedness]
-      gt_circ <- if (!is.null(s$mean_circularity) && !is.na(s$mean_circularity)) s$mean_circularity else 0.75
-      circ_err <- abs(guess_circ - gt_circ) / 0.5 * 100  # scale to 0-100
-
-      # Map sphericity guess to aspect ratio range
-      spher_map <- c(low = 2.5, medium = 1.6, high = 1.15)
-      guess_ar <- spher_map[input$guess_sphericity]
-      gt_ar <- if (!is.null(s$mean_aspect_ratio) && !is.na(s$mean_aspect_ratio)) s$mean_aspect_ratio else 1.6
-      ar_err <- abs(guess_ar - gt_ar) / 1.5 * 100
-
-      spher_s <- max(0, round(100 - mean(c(circ_err, ar_err))))
-    }
-
-    valid_scores <- na.omit(c(area_s, count_s, size_s, spher_s))
-    overall <- if (length(valid_scores) > 0) round(mean(valid_scores)) else 0
-
-    new_row <- data.frame(
-      sample = rv$current,
-      module = mod,
-      area_score = ifelse(is.na(area_s), -1, area_s),
-      count_score = ifelse(is.na(count_s), -1, count_s),
-      size_score = ifelse(is.na(size_s), -1, size_s),
-      spher_score = ifelse(is.na(spher_s), -1, spher_s),
-      overall = overall,
-      area_bias = if (!is.na(area_s)) gp - s$inclusion_pct else NA,
-      count_bias = if (!is.na(count_s)) gc - s$n_inclusions else NA
-    )
-
-    existing <- rv$scores$sample == rv$current & rv$scores$module == mod
-    if (any(existing)) {
-      rv$scores[existing, ] <- new_row
+  shape_icon <- function(kind) {
+    common <- list(viewBox = "0 0 100 60", role = "img")
+    fill <- "#e9ecef"
+    stroke <- "#2c3e50"
+    if (kind == "angular") {
+      do.call(tags$svg, c(common, list(
+        tags$polygon(points = "12,36 28,9 49,25 71,8 90,38 58,51 37,42",
+                     fill = fill, stroke = stroke, `stroke-width` = 3)
+      )))
+    } else if (kind == "subangular") {
+      do.call(tags$svg, c(common, list(
+        tags$polygon(points = "13,35 27,14 50,16 75,23 88,39 65,51 34,47",
+                     fill = fill, stroke = stroke, `stroke-width` = 3)
+      )))
+    } else if (kind == "subrounded") {
+      do.call(tags$svg, c(common, list(
+        tags$ellipse(cx = 50, cy = 31, rx = 38, ry = 20,
+                     fill = fill, stroke = stroke, `stroke-width` = 3)
+      )))
+    } else if (kind == "rounded") {
+      do.call(tags$svg, c(common, list(
+        tags$ellipse(cx = 50, cy = 30, rx = 32, ry = 23,
+                     fill = fill, stroke = stroke, `stroke-width` = 3)
+      )))
+    } else if (kind == "wellrounded") {
+      do.call(tags$svg, c(common, list(
+        tags$circle(cx = 50, cy = 30, r = 24,
+                    fill = fill, stroke = stroke, `stroke-width` = 3)
+      )))
+    } else if (kind == "low") {
+      do.call(tags$svg, c(common, list(
+        tags$ellipse(cx = 50, cy = 30, rx = 43, ry = 10,
+                     fill = fill, stroke = stroke, `stroke-width` = 3)
+      )))
+    } else if (kind == "medium") {
+      do.call(tags$svg, c(common, list(
+        tags$ellipse(cx = 50, cy = 30, rx = 34, ry = 18,
+                     fill = fill, stroke = stroke, `stroke-width` = 3)
+      )))
     } else {
-      rv$scores <- rbind(rv$scores, new_row)
+      do.call(tags$svg, c(common, list(
+        tags$ellipse(cx = 50, cy = 30, rx = 25, ry = 23,
+                     fill = fill, stroke = stroke, `stroke-width` = 3)
+      )))
     }
+  }
+
+  shape_guide_item <- function(label, kind) {
+    div(class = "shape-guide-item", shape_icon(kind), tags$strong(label))
+  }
+
+  observeEvent(input$shape_guide, {
+    showModal(modalDialog(
+      title = "Roundedness and Sphericity Guide",
+      size = "l",
+      easyClose = TRUE,
+      h5("Roundedness"),
+      div(
+        class = "shape-guide-grid",
+        shape_guide_item("Angular", "angular"),
+        shape_guide_item("Sub-angular", "subangular"),
+        shape_guide_item("Sub-rounded", "subrounded"),
+        shape_guide_item("Rounded", "rounded"),
+        shape_guide_item("Well-rounded", "wellrounded")
+      ),
+      h5("Sphericity"),
+      div(
+        class = "shape-guide-grid",
+        shape_guide_item("Low", "low"),
+        shape_guide_item("Medium", "medium"),
+        shape_guide_item("High", "high")
+      ),
+      p(class = "text-muted",
+        "The current app compares your choices with aggregate circularity and aspect-ratio measurements from the segmented grains.")
+    ))
   })
 
   # Current sample data
@@ -597,9 +828,20 @@ server <- function(input, output, session) {
     )
   })
 
-  output$selected_pct_display <- renderText({
-    pct <- input$guess_pct
-    if (is.null(pct)) "none" else paste0(pct, "%")
+  output$area_reference <- renderUI({
+    pct <- input$guess_pct %||% default_area_pct
+    ref_pct <- area_pct_choices[which.min(abs(area_pct_choices - pct))]
+    div(
+      class = "area-reference",
+      tags$img(src = sprintf("images/comparison/pct_%02d.png", ref_pct),
+               alt = paste0(ref_pct, "% area reference")),
+      div(
+        div(class = "area-reference-title",
+            paste0("Nearest reference: ", ref_pct, "%")),
+        div(class = "area-reference-note",
+            paste0("Your estimate: ", pct, "%. Use the image as a visual calibration aid."))
+      )
+    )
   })
 
   # Performance dots in sidebar
@@ -624,6 +866,37 @@ server <- function(input, output, session) {
     div(class = "text-center", dots)
   })
 
+  scale_bar_html <- function() {
+    div(
+      class = "scale-overlay",
+      div(class = "scale-line"),
+      div("100 px")
+    )
+  }
+
+  image_with_scale <- function(src, alt) {
+    div(
+      class = "image-frame",
+      tags$img(src = src, class = "img-fluid", alt = alt),
+      scale_bar_html()
+    )
+  }
+
+  size_legend_html <- function() {
+    div(
+      class = "size-legend-large",
+      span(class = "size-legend-title", "Size class"),
+      lapply(names(size_colors), function(label) {
+        span(
+          class = "size-legend-item",
+          span(class = "size-legend-swatch",
+               style = paste0("background:", size_colors[[label]], ";")),
+          label
+        )
+      })
+    )
+  }
+
   # Image display
   output$image_display <- renderUI({
     s <- current_sample()
@@ -635,28 +908,26 @@ server <- function(input, output, session) {
         class = "row g-2 fade-in",
         div(
           class = "col-md-6",
-          div(class = "card",
-              div(class = "card-header py-1", tags$small(paste0("Original (", pol, ")"))),
-              div(class = "card-body p-1 img-container-split",
-                  tags$img(src = s$orig_path, class = "img-fluid",
-                           alt = "Original thin section")))
+              div(class = "card",
+                  div(class = "card-header py-1", tags$small(paste0("Original (", pol, ")"))),
+                  div(class = "card-body p-1 img-container-split",
+                      image_with_scale(s$orig_path, "Original thin section")))
         ),
         div(
           class = "col-md-6",
           div(class = "card",
-              div(class = "card-header py-1", tags$small("AI Detections (color = size class)")),
+              div(class = "card-header py-1", tags$small("Ground Truth Overlay")),
               div(class = "card-body p-1 img-container-split",
-                  tags$img(src = s$anno_path, class = "img-fluid",
-                           alt = "AI annotated thin section")))
-        )
+                  image_with_scale(s$anno_path, "Ground truth annotated thin section")))
+        ),
+        div(class = "col-12", size_legend_html())
       )
     } else {
       div(
         class = "card fade-in",
         div(class = "card-header py-1", tags$small(paste0("Thin Section (", pol, ")"))),
         div(class = "card-body p-1 img-container",
-            tags$img(src = s$orig_path, class = "img-fluid",
-                     alt = "Original thin section"))
+            image_with_scale(s$orig_path, "Original thin section"))
       )
     }
   })
@@ -691,43 +962,20 @@ server <- function(input, output, session) {
 
   # Results comparison panel
   output$results_panel <- renderUI({
-    req(rv$revealed)
-    s <- current_sample()
-    mod <- input$module
+    req(rv$revealed, rv$last_attempt)
+    attempt <- rv$last_attempt
+    s <- attempt$sample
 
-    guess_pct <- input$guess_pct %||% 0
-    guess_count <- input$guess_count %||% 0
+    guess_pct <- attempt$guess_pct
+    guess_count <- attempt$guess_count
     gt_pct <- s$inclusion_pct
     gt_count <- s$n_inclusions
 
-    # Calculate scores for active module
-    area_s <- if (mod %in% c("all", "area")) calc_score(guess_pct, gt_pct) else NULL
-    count_s <- if (mod %in% c("all", "count")) calc_score(guess_count, gt_count) else NULL
-
-    size_s <- NULL
-    if (mod %in% c("all", "size")) {
-      gt_size <- c(s$Fine_pct, s$Medium_pct, s$Coarse_pct, s$`Very Coarse_pct`)
-      gu_size <- guess_size_dist()
-      size_mae <- mean(abs(gu_size - gt_size))
-      size_s <- max(0, round(100 - size_mae * 2))
-    }
-
-    spher_s <- NULL
-    if (mod %in% c("all", "sphericity")) {
-      round_map <- c(angular = 0.4, subangular = 0.55, subrounded = 0.7,
-                     rounded = 0.82, wellrounded = 0.92)
-      spher_map <- c(low = 2.5, medium = 1.6, high = 1.15)
-      guess_circ <- round_map[input$guess_roundedness]
-      guess_ar <- spher_map[input$guess_sphericity]
-      gt_circ <- if (!is.null(s$mean_circularity) && !is.na(s$mean_circularity)) s$mean_circularity else 0.75
-      gt_ar <- if (!is.null(s$mean_aspect_ratio) && !is.na(s$mean_aspect_ratio)) s$mean_aspect_ratio else 1.6
-      circ_err <- abs(guess_circ - gt_circ) / 0.5 * 100
-      ar_err <- abs(guess_ar - gt_ar) / 1.5 * 100
-      spher_s <- max(0, round(100 - mean(c(circ_err, ar_err))))
-    }
-
-    valid_scores <- Filter(Negate(is.null), list(area_s, count_s, size_s, spher_s))
-    overall <- round(mean(unlist(valid_scores)))
+    area_s <- if (!is.na(attempt$area_score)) attempt$area_score else NULL
+    count_s <- if (!is.na(attempt$count_score)) attempt$count_score else NULL
+    size_s <- if (!is.na(attempt$size_score)) attempt$size_score else NULL
+    spher_s <- if (!is.na(attempt$spher_score)) attempt$spher_score else NULL
+    overall <- attempt$overall
 
     diff_display <- function(guess, actual, unit = "") {
       diff <- guess - actual
@@ -781,29 +1029,19 @@ server <- function(input, output, session) {
     }
 
     if (!is.null(spher_s)) {
-      gt_circ_val <- if (!is.null(s$mean_circularity) && !is.na(s$mean_circularity)) s$mean_circularity else NA
-      gt_ar_val <- if (!is.null(s$mean_aspect_ratio) && !is.na(s$mean_aspect_ratio)) s$mean_aspect_ratio else NA
-
-      # Map circularity to roundedness label
-      circ_label <- if (is.na(gt_circ_val)) "\u2014"
-                    else if (gt_circ_val >= 0.88) "Well-rounded"
-                    else if (gt_circ_val >= 0.76) "Rounded"
-                    else if (gt_circ_val >= 0.62) "Sub-rounded"
-                    else if (gt_circ_val >= 0.48) "Sub-angular"
-                    else "Angular"
-
-      ar_label <- if (is.na(gt_ar_val)) "\u2014"
-                  else if (gt_ar_val <= 1.3) "High"
-                  else if (gt_ar_val <= 1.9) "Medium"
-                  else "Low"
+      gt_circ_val <- attempt$gt_circ
+      gt_ar_val <- attempt$gt_ar
+      circ_label <- attempt$circ_label
+      ar_label <- attempt$ar_label
 
       stat_cards[[length(stat_cards) + 1]] <- div(
         class = "col",
         div(class = "stat-card h-100",
-            div(class = "stat-label", "Roundedness"),
+            div(class = "stat-label", "Grain Shape"),
             div(class = "stat-value", style = "font-size: 18px;", circ_label),
             div(class = "stat-diff text-muted",
-                paste0("circ=", if (!is.na(gt_circ_val)) round(gt_circ_val, 2) else "?",
+                paste0(ar_label, " sph. | circ=",
+                       if (!is.na(gt_circ_val)) round(gt_circ_val, 2) else "?",
                        " AR=", if (!is.na(gt_ar_val)) round(gt_ar_val, 2) else "?"))
         )
       )
@@ -829,22 +1067,23 @@ server <- function(input, output, session) {
 
   # Size distribution comparison plot with size-class colors
   output$size_comparison_plot <- renderPlot({
-    req(rv$revealed)
-    s <- current_sample()
+    req(rv$revealed, rv$last_attempt)
+    attempt <- rv$last_attempt
+    req(!is.na(attempt$size_score))
 
     size_cats <- c("Fine", "Medium", "Coarse", "Very Coarse")
 
-    gt_vals <- c(s$Fine_pct, s$Medium_pct, s$Coarse_pct, s$`Very Coarse_pct`)
-    gu_vals <- guess_size_dist()
+    gt_vals <- attempt$gt_size
+    gu_vals <- attempt$guess_size
 
     comparison <- data.frame(
       category = rep(factor(size_cats, levels = size_cats), 2),
-      source = rep(c("Your Estimate", "AI Measurement"), each = 4),
+      source = rep(c("Your Estimate", "Ground Truth"), each = 4),
       pct = c(gu_vals, gt_vals)
     )
 
     # Split into estimate and AI data for separate color mapping
-    ai_data <- comparison |> filter(source == "AI Measurement")
+    ai_data <- comparison |> filter(source == "Ground Truth")
     est_data <- comparison |> filter(source == "Your Estimate")
 
     ggplot() +
@@ -864,7 +1103,7 @@ server <- function(input, output, session) {
                label = "\u25A0 Your estimate   ", color = "#bdc3c7",
                size = 3.5, hjust = 0, fontface = "bold") +
       annotate("text", x = 2.5, y = max(c(gt_vals, gu_vals)) + 3,
-               label = "\u25A0 AI measurement (color = size class)",
+               label = "\u25A0 Ground truth (color = size class)",
                color = "#555", size = 3.5, hjust = 0, fontface = "bold") +
       labs(x = NULL, y = "Percentage (%)") +
       theme_petro()
@@ -953,8 +1192,17 @@ server <- function(input, output, session) {
 
     if (nrow(plot_data) == 0) return(NULL)
 
-    ggplot(plot_data, aes(x = attempt, y = score, color = metric)) +
-      geom_line(linewidth = 1.2, alpha = 0.8) +
+    line_data <- plot_data |>
+      group_by(metric) |>
+      filter(n() > 1) |>
+      ungroup()
+
+    p <- ggplot(plot_data, aes(x = attempt, y = score, color = metric))
+    if (nrow(line_data) > 0) {
+      p <- p + geom_line(data = line_data, aes(group = metric), linewidth = 1.2, alpha = 0.8)
+    }
+
+    p +
       geom_point(size = 3) +
       scale_color_manual(values = c("Area %" = "#3498db", "Count" = "#e74c3c",
                                     "Size Dist." = "#f39c12", "Sphericity" = "#9b59b6")) +

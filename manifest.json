@@ -1888,10 +1888,10 @@
       "checksum": "05bdb783ee6514c8c072e47680af8ff7"
     },
     "app.R": {
-      "checksum": "363aa073db5d550ba4f3db5b0d7d5832"
+      "checksum": "e21ca99dedd43471a98cd7d3caefcc39"
     },
     "data/gen_comparison_charts.R": {
-      "checksum": "cb22ab86cb8747c5d359737fc05a5f96"
+      "checksum": "28363fb7f49f9e469702e4ca04536287"
     },
     "data/ground_truth_objects.csv": {
       "checksum": "44fd76c9957297b48a1731ede330fdf8"
@@ -1906,7 +1906,7 @@
       "checksum": "d0934ac0b069e169dab5a21d83d54345"
     },
     "scripts/gen_seg_overlays.py": {
-      "checksum": "cf287813198df7723e5e890a21fe0628"
+      "checksum": "64596a449bae7327ad9a84ab4b88960a"
     },
     "www/images/annotated/12_251_xp_000025_result.jpg": {
       "checksum": "1ba809025ef49354bd09e39540bd277f"
@@ -2000,6 +2000,12 @@
     },
     "www/images/comparison/pct_50.png": {
       "checksum": "c3699a8b9f692cdf83da51ef8466f519"
+    },
+    "www/images/comparison/pct_55.png": {
+      "checksum": "1f2c681a000edd77e4b6021e06af503f"
+    },
+    "www/images/comparison/pct_60.png": {
+      "checksum": "ed54c2e2661a7314319e1d6349783547"
     },
     "www/images/original/12_251_xp_000025.jpg": {
       "checksum": "bb0f60299d7148e07c242b8098d7bfe3"

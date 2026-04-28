@@ -278,7 +278,7 @@ def main():
             img_pil.save(os.path.join(OUTPUT_IMG_DIR, fname))
 
             # Render overlay
-            anno_name = fname.replace('.jpg', '_result.png')
+            anno_name = fname.replace('.jpg', '_result.jpg')
             render_color_overlay(img_array, valid_masks, size_classes,
                                 os.path.join(OUTPUT_ANNO_DIR, anno_name))
 

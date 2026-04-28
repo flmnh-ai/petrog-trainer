@@ -71,7 +71,7 @@ generate_chart <- function(target_pct, size = 200) {
 }
 
 # Generate charts for key percentages
-percentages <- c(1, 3, 5, 7, 10, 15, 20, 25, 30, 40, 50)
+percentages <- c(1, 3, 5, 7, 10, 15, 20, 25, 30, 40, 50, 55, 60)
 
 for (pct in percentages) {
   result <- generate_chart(pct)
