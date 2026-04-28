@@ -36,17 +36,16 @@ miss_review_delay <- 2
 practice_review_delay <- 6
 
 lesson_defs <- data.frame(
-  value = c("area", "count", "size", "sphericity", "all"),
-  title = c("Inclusion Area", "Grain Count", "Grain Size", "Grain Shape", "Full Practice"),
+  value = c("area", "size", "sphericity", "all"),
+  title = c("Inclusion Area", "Grain Size", "Grain Shape", "Full Practice"),
   description = c(
     "Estimate total inclusion coverage.",
-    "Estimate the number of visible inclusions.",
     "Identify the dominant size pattern.",
     "Practice roundedness and sphericity.",
     "Combine every skill in one attempt."
   ),
-  tag = c("Start here", "Focused", "Focused", "Focused", "Advanced"),
-  icon = c("chart-pie", "list-ol", "grip", "circle-half-stroke", "layer-group"),
+  tag = c("Start here", "Focused", "Focused", "Advanced"),
+  icon = c("chart-pie", "grip", "circle-half-stroke", "layer-group"),
   stringsAsFactors = FALSE
 )
 
@@ -115,417 +114,189 @@ score_grade <- function(score) {
   else list(letter = "F", color = "#e74c3c", label = "Keep trying")
 }
 
-# ggplot theme
+# ggplot theme — refined field-journal aesthetic, transparent bg
 theme_petro <- function() {
-  theme_minimal(base_size = 14) %+replace%
+  theme_minimal(base_size = 13) %+replace%
     theme(
+      plot.background  = element_rect(fill = NA, color = NA),
+      panel.background = element_rect(fill = NA, color = NA),
       panel.grid.minor = element_blank(),
       panel.grid.major.x = element_blank(),
+      panel.grid.major.y = element_line(color = "#ede4d1", linewidth = 0.4),
+      axis.ticks = element_blank(),
+      axis.text  = element_text(color = "#6f6558", size = 10),
+      axis.title = element_text(color = "#3c352c", size = 11),
+      axis.title.x = element_text(margin = margin(t = 8)),
+      axis.title.y = element_text(margin = margin(r = 8)),
+      plot.title = element_text(color = "#1f1a14", size = 14, face = "bold",
+                                hjust = 0, margin = margin(b = 10)),
       legend.position = "top",
-      plot.margin = margin(10, 10, 10, 10)
+      legend.justification = "left",
+      legend.text  = element_text(color = "#3c352c", size = 11),
+      legend.title = element_text(color = "#6f6558", size = 10),
+      legend.key.size = unit(0.9, "lines"),
+      plot.margin = margin(14, 14, 12, 12)
     )
 }
 
-# --- CSS ---
-app_css <- "
-/* Viewport-aware layout */
-.main-content {
-  max-height: calc(100vh - 80px);
-  overflow-y: auto;
+# --- UI helpers (pure, stateless) ---
+
+lesson_card_button <- function(value, prefix, selected = NULL, status = NULL) {
+  lesson <- lesson_defs[lesson_defs$value == value, ][1, ]
+  tag_text <- if (!is.null(status) && !is.null(status$tag)) status$tag else lesson$tag
+  status_class <- if (!is.null(status) && !is.null(status$class)) status$class else ""
+  actionButton(
+    inputId = paste0(prefix, "_", value),
+    label = tagList(
+      div(
+        class = "lesson-title",
+        icon(lesson$icon),
+        span(lesson$title),
+        span(class = "lesson-tag", tag_text)
+      ),
+      div(class = "lesson-desc", lesson$description)
+    ),
+    class = paste(
+      "lesson-card",
+      status_class,
+      if (!is.null(selected) && selected == value) "active" else ""
+    )
+  )
 }
 
-/* Constrain images to viewport */
-.img-container img {
-  max-height: calc(100vh - 200px);
-  width: 100%;
-  object-fit: contain;
+lesson_picker <- function(prefix, selected = NULL, statuses = NULL) {
+  div(
+    class = "lesson-grid",
+    lapply(lesson_defs$value, function(value) {
+      status <- if (!is.null(statuses) && value %in% names(statuses)) statuses[[value]] else NULL
+      lesson_card_button(value, prefix, selected, status)
+    })
+  )
 }
 
-.img-container-split img {
-  max-height: calc(100vh - 300px);
-  width: 100%;
-  object-fit: contain;
-}
-
-.image-frame {
-  position: relative;
-  display: inline-block;
-  width: 100%;
-}
-
-.scale-overlay {
-  position: absolute;
-  left: 14px;
-  bottom: 14px;
-  padding: 6px 8px;
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.62);
-  color: #fff;
-  font-size: 12px;
-  line-height: 1;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
-}
-
-.scale-line {
-  width: 100px;
-  height: 8px;
-  border-left: 2px solid #fff;
-  border-right: 2px solid #fff;
-  border-bottom: 3px solid #fff;
-  margin-bottom: 5px;
-}
-
-.area-reference {
-  display: grid;
-  grid-template-columns: 72px 1fr;
-  gap: 8px;
-  align-items: center;
-  margin-top: 6px;
-  padding: 6px;
-  border: 1px solid #dee2e6;
-  border-radius: 6px;
-  background: #f8f9fa;
-}
-
-.area-reference img {
-  width: 72px;
-  height: 72px;
-  object-fit: contain;
-  border: 1px solid #adb5bd;
-  background: #fff;
-}
-
-.area-reference-title {
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.area-reference-note {
-  font-size: 11px;
-  color: #6c757d;
-}
-
-.size-legend-large {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px 16px;
-  align-items: center;
-  margin-top: 8px;
-  padding: 8px 10px;
-  border: 1px solid #dee2e6;
-  border-radius: 6px;
-  background: #fff;
-  font-size: 14px;
-}
-
-.size-legend-title {
-  font-weight: 700;
-  margin-right: 2px;
-}
-
-.size-legend-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.size-legend-swatch {
-  width: 16px;
-  height: 16px;
-  border-radius: 3px;
-  display: inline-block;
-  border: 1px solid rgba(0, 0, 0, 0.2);
-}
-
-.shape-guide-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
-  gap: 10px;
-  margin: 8px 0 16px;
-}
-
-.shape-guide-item {
-  text-align: center;
-  font-size: 12px;
-}
-
-.shape-guide-item svg {
-  display: block;
-  width: 88px;
-  height: 58px;
-  margin: 0 auto 4px;
-}
-
-/* Score ring */
-.score-ring {
-  position: relative;
-  width: 100px;
-  height: 100px;
-  margin: 0 auto;
-}
-.score-ring svg { transform: rotate(-90deg); }
-.score-ring .score-text {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  text-align: center;
-}
-.score-ring .score-letter {
-  font-size: 28px;
-  font-weight: 700;
-  line-height: 1;
-}
-.score-ring .score-label {
-  font-size: 10px;
-  opacity: 0.7;
-}
-
-/* Stat card */
-.stat-card {
-  background: #f8f9fa;
-  border: 1px solid #dee2e6;
-  border-radius: 8px;
-  padding: 12px;
-  text-align: center;
-}
-.stat-card .stat-value { font-size: 24px; font-weight: 700; }
-.stat-card .stat-label { font-size: 11px; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.5px; }
-.stat-card .stat-diff { font-size: 13px; margin-top: 2px; }
-
-/* Smooth transitions */
-.fade-in { animation: fadeIn 0.3s ease-in; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-/* Performance trend mini-chart */
-.perf-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  display: inline-block;
-  margin: 0 2px;
-  opacity: 0.3;
-}
-.perf-dot.completed { opacity: 1; }
-
-.session-nav .btn {
-  width: 34px;
-  height: 32px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.lesson-header {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(180px, 260px);
-  gap: 16px;
-  align-items: center;
-  margin-bottom: 10px;
-  padding: 10px 12px;
-  border: 1px solid #dee2e6;
-  border-radius: 8px;
-  background: #fff;
-}
-
-.lesson-header h5 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 700;
-}
-
-.lesson-progress-meta {
-  margin-top: 2px;
-  color: #6c757d;
-  font-size: 12px;
-}
-
-.progress-track {
-  width: 100%;
-  height: 8px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: #e9ecef;
-}
-
-.progress-fill {
-  height: 100%;
-  border-radius: 999px;
-  background: #2c3e50;
-  transition: width 0.25s ease;
-}
-
-.progress-label {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 4px;
-  color: #495057;
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.lesson-grid {
-  display: grid;
-  gap: 6px;
-}
-
-.lesson-card.btn {
-  width: 100%;
-  white-space: normal;
-  text-align: left;
-  border: 1px solid #dee2e6;
-  border-radius: 8px;
-  background: #fff;
-  color: #212529;
-  padding: 8px 10px;
-}
-
-.lesson-card.btn:hover {
-  border-color: #95a5a6;
-  background: #f8f9fa;
-}
-
-.lesson-card.btn.active {
-  border-color: #2c3e50;
-  background: #eef3f7;
-  box-shadow: 0 0 0 2px rgba(44, 62, 80, 0.12);
-}
-
-.lesson-card.btn.practicing .lesson-tag {
-  background: #fff3cd;
-  color: #664d03;
-}
-
-.lesson-card.btn.strong .lesson-tag {
-  background: #d1e7dd;
-  color: #0f5132;
-}
-
-.lesson-card.btn.complete .lesson-tag {
-  background: #cfe2ff;
-  color: #084298;
-}
-
-.lesson-card-active {
-  border: 1px solid #2c3e50;
-  background: #eef3f7;
-  box-shadow: 0 0 0 2px rgba(44, 62, 80, 0.12);
-  border-radius: 8px;
-  padding: 8px 10px;
-}
-
-.lesson-card-active.practicing .lesson-tag { background: #fff3cd; color: #664d03; }
-.lesson-card-active.strong .lesson-tag { background: #d1e7dd; color: #0f5132; }
-.lesson-card-active.complete .lesson-tag { background: #cfe2ff; color: #084298; }
-
-.round-recap-skill {
-  font-size: 16px;
-  font-weight: 700;
-  margin-bottom: 12px;
-}
-.round-recap-skill i { margin-right: 6px; }
-
-.round-recap-dims {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
-}
-
-.round-recap-chip {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: #f8f9fa;
-  border: 1px solid #dee2e6;
-  font-size: 13px;
-}
-
-.lesson-title {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.lesson-title i {
-  width: 16px;
-  text-align: center;
-}
-
-.lesson-tag {
-  margin-left: auto;
-  padding: 1px 6px;
-  border-radius: 999px;
-  background: #e9ecef;
-  color: #495057;
-  font-size: 10px;
-  font-weight: 600;
-}
-
-.lesson-desc {
-  margin-top: 3px;
-  color: #6c757d;
-  font-size: 11px;
-}
-
-.module-native {
-  display: none;
-}
-
-.feedback-card {
-  background: #fff;
-  border: 1px solid #dee2e6;
-  border-radius: 8px;
-  padding: 10px 12px;
-  margin-bottom: 8px;
-}
-
-.feedback-card h6 {
-  margin-bottom: 6px;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.feedback-card ul {
-  margin: 0;
-  padding-left: 18px;
-  font-size: 13px;
-}
-
-.result-actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-  margin-top: 8px;
-}
-
-.result-actions .btn {
-  min-width: 130px;
-}
-
-@media (max-width: 768px) {
-  .lesson-header {
-    grid-template-columns: 1fr;
+shape_icon <- function(kind) {
+  common <- list(viewBox = "0 0 100 60", role = "img")
+  fill <- "#e9ecef"
+  stroke <- "#2c3e50"
+  if (kind == "angular") {
+    do.call(tags$svg, c(common, list(
+      tags$polygon(points = "12,36 28,9 49,25 71,8 90,38 58,51 37,42",
+                   fill = fill, stroke = stroke, `stroke-width` = 3)
+    )))
+  } else if (kind == "subangular") {
+    do.call(tags$svg, c(common, list(
+      tags$polygon(points = "13,35 27,14 50,16 75,23 88,39 65,51 34,47",
+                   fill = fill, stroke = stroke, `stroke-width` = 3)
+    )))
+  } else if (kind == "subrounded") {
+    do.call(tags$svg, c(common, list(
+      tags$ellipse(cx = 50, cy = 31, rx = 38, ry = 20,
+                   fill = fill, stroke = stroke, `stroke-width` = 3)
+    )))
+  } else if (kind == "rounded") {
+    do.call(tags$svg, c(common, list(
+      tags$ellipse(cx = 50, cy = 30, rx = 32, ry = 23,
+                   fill = fill, stroke = stroke, `stroke-width` = 3)
+    )))
+  } else if (kind == "wellrounded") {
+    do.call(tags$svg, c(common, list(
+      tags$circle(cx = 50, cy = 30, r = 24,
+                  fill = fill, stroke = stroke, `stroke-width` = 3)
+    )))
+  } else if (kind == "low") {
+    do.call(tags$svg, c(common, list(
+      tags$ellipse(cx = 50, cy = 30, rx = 43, ry = 10,
+                   fill = fill, stroke = stroke, `stroke-width` = 3)
+    )))
+  } else if (kind == "medium") {
+    do.call(tags$svg, c(common, list(
+      tags$ellipse(cx = 50, cy = 30, rx = 34, ry = 18,
+                   fill = fill, stroke = stroke, `stroke-width` = 3)
+    )))
+  } else {
+    do.call(tags$svg, c(common, list(
+      tags$ellipse(cx = 50, cy = 30, rx = 25, ry = 23,
+                   fill = fill, stroke = stroke, `stroke-width` = 3)
+    )))
   }
 }
 
-/* Module badge */
-.module-badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+shape_guide_item <- function(label, kind) {
+  div(class = "shape-guide-item", shape_icon(kind), tags$strong(label))
 }
 
-/* Compact sidebar */
-.sidebar-section { margin-bottom: 8px; }
-.sidebar-section h6 { margin-bottom: 4px; font-size: 13px; }
-"
+scale_bar_html <- function() {
+  div(
+    class = "scale-overlay",
+    div(class = "scale-line"),
+    div("100 px")
+  )
+}
+
+image_with_scale <- function(src, alt) {
+  div(
+    class = "image-frame",
+    tags$img(src = src, class = "img-fluid", alt = alt),
+    scale_bar_html()
+  )
+}
+
+size_legend_html <- function() {
+  div(
+    class = "size-legend-large",
+    span(class = "size-legend-title", "Size class"),
+    lapply(names(size_colors), function(label) {
+      span(
+        class = "size-legend-item",
+        span(class = "size-legend-swatch",
+             style = paste0("background:", size_colors[[label]], ";")),
+        label
+      )
+    })
+  )
+}
+
+sample_context_strip <- function(sample) {
+  pol <- if (!is.null(sample$polarization) && !is.na(sample$polarization)) sample$polarization else "XPL"
+  fabric <- if (!is.null(sample$fabric_type) && !is.na(sample$fabric_type)) sample$fabric_type else ""
+  sample_name <- if (!is.null(sample$sample_name) && !is.na(sample$sample_name)) sample$sample_name else ""
+
+  pol_color <- if (pol == "PPL") "#8e44ad" else "#2980b9"
+
+  div(
+    class = "sample-context-strip",
+    if (nchar(sample_name) > 0) tags$span(class = "badge bg-secondary me-1", sample_name),
+    if (nchar(fabric) > 0) tags$span(class = "badge bg-info me-1", paste0("Fabric ", fabric)),
+    tags$span(class = "badge", style = paste0("background:", pol_color), pol)
+  )
+}
+
+score_ring_html <- function(score, size = 100) {
+  grade <- score_grade(score)
+  r <- (size / 2) - 10
+  circumference <- 2 * pi * r
+  offset <- circumference * (1 - score / 100)
+
+  div(
+    class = "score-ring fade-in",
+    style = paste0("width:", size, "px; height:", size, "px;"),
+    HTML(sprintf('
+      <svg width="%d" height="%d" viewBox="0 0 %d %d">
+        <circle cx="%d" cy="%d" r="%d" fill="none" stroke="#e9ecef" stroke-width="7"/>
+        <circle cx="%d" cy="%d" r="%d" fill="none" stroke="%s" stroke-width="7"
+                stroke-dasharray="%.1f" stroke-dashoffset="%.1f"
+                stroke-linecap="round" style="transition: stroke-dashoffset 0.8s ease;"/>
+      </svg>',
+      size, size, size, size,
+      size/2, size/2, r,
+      size/2, size/2, r, grade$color, circumference, offset)),
+    div(
+      class = "score-text",
+      div(class = "score-letter", style = paste0("color:", grade$color), grade$letter),
+      div(class = "score-label", grade$label)
+    )
+  )
+}
 
 # --- UI ---
 ui <- page_navbar(
@@ -534,12 +305,21 @@ ui <- page_navbar(
   selected = "Practice",
   theme = bs_theme(
     version = 5,
-    bootswatch = "flatly",
-    base_font = font_google("Inter")
+    bg = "#f7f1e6",
+    fg = "#1f1a14",
+    primary = "#b04a2e",
+    secondary = "#5c534a",
+    success = "#5a7a3d",
+    warning = "#c08a2e",
+    danger = "#a3361f",
+    info = "#1f3b5b",
+    base_font = font_google("DM Sans"),
+    heading_font = font_google("Fraunces"),
+    code_font = font_google("JetBrains Mono")
   ),
 
   header = tags$head(
-    tags$style(HTML(app_css))
+    tags$link(rel = "stylesheet", href = "app.css")
   ),
 
   # --- Practice tab with module selector ---
@@ -561,9 +341,6 @@ ui <- page_navbar(
                        title = "Skip this question")
         ),
 
-        # Sample info badges
-        uiOutput("sample_info"),
-
         # Performance dots
         uiOutput("perf_dots"),
 
@@ -579,7 +356,6 @@ ui <- page_navbar(
             radioButtons("module", NULL,
                          choices = c(
                            "Inclusion Area" = "area",
-                           "Grain Count" = "count",
                            "Grain Size" = "size",
                            "Grain Shape" = "sphericity",
                            "Full Practice" = "all"
@@ -597,16 +373,6 @@ ui <- page_navbar(
                         min = min(area_pct_choices), max = max(area_pct_choices),
                         value = default_area_pct, step = 1, post = "%"),
             uiOutput("area_reference")
-          )
-        ),
-
-        # --- Count inputs ---
-        conditionalPanel(
-          condition = "input.module == 'all' || input.module == 'count'",
-          div(
-            class = "sidebar-section",
-            sliderInput("guess_count", "Estimated number of inclusions",
-                        min = 0, max = 300, value = 50, step = 5)
           )
         ),
 
@@ -689,7 +455,7 @@ ui <- page_navbar(
       div(class = "mt-4",
           plotOutput("performance_trend", height = "280px")),
       div(class = "mt-4",
-          plotOutput("bias_plot", height = "230px"))
+          plotOutput("bias_plot", height = "240px"))
     )
   ),
 
@@ -706,7 +472,6 @@ ui <- page_navbar(
       p("Use the module selector in the Practice tab to focus on specific skills:"),
       tags$ul(
         tags$li(tags$strong("Inclusion Area"), " \u2014 Estimate what percentage of the image is occupied by inclusions (temper + aplastics)"),
-        tags$li(tags$strong("Grain Count"), " \u2014 Estimate the total number of visible inclusions"),
         tags$li(tags$strong("Grain Size"), " \u2014 Characterize the grain size distribution across Fine, Medium, Coarse, and Very Coarse categories"),
         tags$li(tags$strong("Grain Shape"), " \u2014 Assess grain roundedness and sphericity (elongation)"),
         tags$li(tags$strong("Full Practice"), " \u2014 Combine all skills in one attempt")
@@ -767,39 +532,6 @@ ui <- page_navbar(
 # --- Server ---
 server <- function(input, output, session) {
 
-  lesson_card_button <- function(value, prefix, selected = NULL, status = NULL) {
-    lesson <- lesson_defs[lesson_defs$value == value, ][1, ]
-    tag_text <- if (!is.null(status) && !is.null(status$tag)) status$tag else lesson$tag
-    status_class <- if (!is.null(status) && !is.null(status$class)) status$class else ""
-    actionButton(
-      inputId = paste0(prefix, "_", value),
-      label = tagList(
-        div(
-          class = "lesson-title",
-          icon(lesson$icon),
-          span(lesson$title),
-          span(class = "lesson-tag", tag_text)
-        ),
-        div(class = "lesson-desc", lesson$description)
-      ),
-      class = paste(
-        "lesson-card",
-        status_class,
-        if (!is.null(selected) && selected == value) "active" else ""
-      )
-    )
-  }
-
-  lesson_picker <- function(prefix, selected = NULL, statuses = NULL) {
-    div(
-      class = "lesson-grid",
-      lapply(lesson_defs$value, function(value) {
-        status <- if (!is.null(statuses) && value %in% names(statuses)) statuses[[value]] else NULL
-        lesson_card_button(value, prefix, selected, status)
-      })
-    )
-  }
-
   show_skill_picker_modal <- function(selected = default_module,
                                        statuses = NULL,
                                        title = "Pick a skill",
@@ -838,7 +570,6 @@ server <- function(input, output, session) {
       module = input_value(input$module, default_module),
       overall = round(mean(round_rows$overall)),
       area = dim_avg("area_score"),
-      count = dim_avg("count_score"),
       size = dim_avg("size_score"),
       spher = dim_avg("spher_score")
     )
@@ -847,7 +578,6 @@ server <- function(input, output, session) {
   weakest_dim <- function(summary) {
     dims <- list(
       list(score = summary$area, module = "area", title = "Inclusion Area"),
-      list(score = summary$count, module = "count", title = "Grain Count"),
       list(score = summary$size, module = "size", title = "Grain Size"),
       list(score = summary$spher, module = "sphericity", title = "Grain Shape")
     )
@@ -869,7 +599,6 @@ server <- function(input, output, session) {
 
     chips <- list()
     if (!is.na(summary$area)) chips[[length(chips) + 1]] <- chip("Area", summary$area)
-    if (!is.na(summary$count)) chips[[length(chips) + 1]] <- chip("Count", summary$count)
     if (!is.na(summary$size)) chips[[length(chips) + 1]] <- chip("Size", summary$size)
     if (!is.na(summary$spher)) chips[[length(chips) + 1]] <- chip("Shape", summary$spher)
 
@@ -932,12 +661,10 @@ server <- function(input, output, session) {
       sample = integer(),
       module = character(),
       area_score = numeric(),
-      count_score = numeric(),
       size_score = numeric(),
       spher_score = numeric(),
       overall = numeric(),
-      area_bias = numeric(),
-      count_bias = numeric()
+      area_bias = numeric()
     )
   )
 
@@ -947,7 +674,6 @@ server <- function(input, output, session) {
 
   reset_inputs <- function() {
     updateSliderInput(session, "guess_pct", value = default_area_pct)
-    updateSliderInput(session, "guess_count", value = 50)
     updateSelectInput(session, "guess_dominant", selected = "Medium")
     updateSelectInput(session, "guess_sorting", selected = "moderate")
     updateSelectInput(session, "guess_secondary", selected = "Coarse")
@@ -1080,7 +806,6 @@ server <- function(input, output, session) {
     s <- samples[sample_index, ]
     mod <- input_value(input$module, default_module)
     guess_pct <- input_value(input$guess_pct, default_area_pct)
-    guess_count <- input_value(input$guess_count, 50)
     guess_dominant <- input_value(input$guess_dominant, "Medium")
     guess_sorting <- input_value(input$guess_sorting, "moderate")
     guess_secondary <- input_value(input$guess_secondary, "Coarse")
@@ -1088,12 +813,10 @@ server <- function(input, output, session) {
     guess_sphericity <- input_value(input$guess_sphericity, "medium")
 
     gt_pct <- s$inclusion_pct
-    gt_count <- s$n_inclusions
     gt_size <- c(s$Fine_pct, s$Medium_pct, s$Coarse_pct, s$`Very Coarse_pct`)
     guess_size <- size_dist_from_guess(guess_dominant, guess_sorting, guess_secondary)
 
     area_s <- if (mod %in% c("all", "area")) calc_score(guess_pct, gt_pct) else NA_real_
-    count_s <- if (mod %in% c("all", "count")) calc_score(guess_count, gt_count) else NA_real_
 
     size_s <- NA_real_
     if (mod %in% c("all", "size")) {
@@ -1118,7 +841,7 @@ server <- function(input, output, session) {
       spher_s <- max(0, round(100 - mean(c(circ_err, ar_err))))
     }
 
-    valid_scores <- c(area_s, count_s, size_s, spher_s)
+    valid_scores <- c(area_s, size_s, spher_s)
     valid_scores <- valid_scores[!is.na(valid_scores)]
     overall <- if (length(valid_scores) > 0) round(mean(valid_scores)) else 0
 
@@ -1139,16 +862,13 @@ server <- function(input, output, session) {
       sample = s,
       module = mod,
       guess_pct = guess_pct,
-      guess_count = guess_count,
       guess_size = guess_size,
       gt_size = gt_size,
       area_score = area_s,
-      count_score = count_s,
       size_score = size_s,
       spher_score = spher_s,
       overall = overall,
       area_bias = if (!is.na(area_s)) guess_pct - gt_pct else NA_real_,
-      count_bias = if (!is.na(count_s)) guess_count - gt_count else NA_real_,
       circ_label = circ_label,
       ar_label = ar_label,
       gt_circ = gt_circ_val,
@@ -1162,12 +882,10 @@ server <- function(input, output, session) {
       sample = attempt$sample_index,
       module = attempt$module,
       area_score = ifelse(is.na(attempt$area_score), -1, attempt$area_score),
-      count_score = ifelse(is.na(attempt$count_score), -1, attempt$count_score),
       size_score = ifelse(is.na(attempt$size_score), -1, attempt$size_score),
       spher_score = ifelse(is.na(attempt$spher_score), -1, attempt$spher_score),
       overall = attempt$overall,
       area_bias = attempt$area_bias,
-      count_bias = attempt$count_bias,
       stringsAsFactors = FALSE
     )
   }
@@ -1218,57 +936,6 @@ server <- function(input, output, session) {
       show_round_complete_modal()
     }
   })
-
-  shape_icon <- function(kind) {
-    common <- list(viewBox = "0 0 100 60", role = "img")
-    fill <- "#e9ecef"
-    stroke <- "#2c3e50"
-    if (kind == "angular") {
-      do.call(tags$svg, c(common, list(
-        tags$polygon(points = "12,36 28,9 49,25 71,8 90,38 58,51 37,42",
-                     fill = fill, stroke = stroke, `stroke-width` = 3)
-      )))
-    } else if (kind == "subangular") {
-      do.call(tags$svg, c(common, list(
-        tags$polygon(points = "13,35 27,14 50,16 75,23 88,39 65,51 34,47",
-                     fill = fill, stroke = stroke, `stroke-width` = 3)
-      )))
-    } else if (kind == "subrounded") {
-      do.call(tags$svg, c(common, list(
-        tags$ellipse(cx = 50, cy = 31, rx = 38, ry = 20,
-                     fill = fill, stroke = stroke, `stroke-width` = 3)
-      )))
-    } else if (kind == "rounded") {
-      do.call(tags$svg, c(common, list(
-        tags$ellipse(cx = 50, cy = 30, rx = 32, ry = 23,
-                     fill = fill, stroke = stroke, `stroke-width` = 3)
-      )))
-    } else if (kind == "wellrounded") {
-      do.call(tags$svg, c(common, list(
-        tags$circle(cx = 50, cy = 30, r = 24,
-                    fill = fill, stroke = stroke, `stroke-width` = 3)
-      )))
-    } else if (kind == "low") {
-      do.call(tags$svg, c(common, list(
-        tags$ellipse(cx = 50, cy = 30, rx = 43, ry = 10,
-                     fill = fill, stroke = stroke, `stroke-width` = 3)
-      )))
-    } else if (kind == "medium") {
-      do.call(tags$svg, c(common, list(
-        tags$ellipse(cx = 50, cy = 30, rx = 34, ry = 18,
-                     fill = fill, stroke = stroke, `stroke-width` = 3)
-      )))
-    } else {
-      do.call(tags$svg, c(common, list(
-        tags$ellipse(cx = 50, cy = 30, rx = 25, ry = 23,
-                     fill = fill, stroke = stroke, `stroke-width` = 3)
-      )))
-    }
-  }
-
-  shape_guide_item <- function(label, kind) {
-    div(class = "shape-guide-item", shape_icon(kind), tags$strong(label))
-  }
 
   observeEvent(input$shape_guide, {
     showModal(modalDialog(
@@ -1400,33 +1067,6 @@ server <- function(input, output, session) {
     )
   })
 
-  # Sample info badge (sample name, fabric type, polarization)
-  output$sample_info <- renderUI({
-    s <- current_sample()
-    pol <- if (!is.null(s$polarization) && !is.na(s$polarization)) s$polarization else "XPL"
-    fabric <- if (!is.null(s$fabric_type) && !is.na(s$fabric_type)) s$fabric_type else ""
-    sample_name <- if (!is.null(s$sample_name) && !is.na(s$sample_name)) s$sample_name else ""
-
-    pol_color <- if (pol == "PPL") "#8e44ad" else "#2980b9"
-
-    div(
-      class = "text-center mb-1",
-      if (nchar(sample_name) > 0) tags$span(
-        class = "badge bg-secondary me-1",
-        sample_name
-      ),
-      if (nchar(fabric) > 0) tags$span(
-        class = "badge bg-info me-1",
-        paste0("Fabric ", fabric)
-      ),
-      tags$span(
-        class = "badge",
-        style = paste0("background:", pol_color),
-        pol
-      )
-    )
-  })
-
   output$area_reference <- renderUI({
     pct <- input$guess_pct %||% default_area_pct
     ref_pct <- area_pct_choices[which.min(abs(area_pct_choices - pct))]
@@ -1456,37 +1096,6 @@ server <- function(input, output, session) {
     div(class = "text-center", dots)
   })
 
-  scale_bar_html <- function() {
-    div(
-      class = "scale-overlay",
-      div(class = "scale-line"),
-      div("100 px")
-    )
-  }
-
-  image_with_scale <- function(src, alt) {
-    div(
-      class = "image-frame",
-      tags$img(src = src, class = "img-fluid", alt = alt),
-      scale_bar_html()
-    )
-  }
-
-  size_legend_html <- function() {
-    div(
-      class = "size-legend-large",
-      span(class = "size-legend-title", "Size class"),
-      lapply(names(size_colors), function(label) {
-        span(
-          class = "size-legend-item",
-          span(class = "size-legend-swatch",
-               style = paste0("background:", size_colors[[label]], ";")),
-          label
-        )
-      })
-    )
-  }
-
   # Image display
   output$image_display <- renderUI({
     s <- current_sample()
@@ -1496,6 +1105,7 @@ server <- function(input, output, session) {
     if (rv$revealed) {
       div(
         class = "row g-2 fade-in",
+        div(class = "col-12", sample_context_strip(s)),
         div(
           class = "col-md-6",
               div(class = "card",
@@ -1515,40 +1125,12 @@ server <- function(input, output, session) {
     } else {
       div(
         class = "card fade-in",
-        div(class = "card-header py-1", tags$small(paste0("Thin Section (", pol, ")"))),
+        div(class = "card-header py-1", tags$small("Thin Section")),
         div(class = "card-body p-1 img-container",
             image_with_scale(s$orig_path, "Original thin section"))
       )
     }
   })
-
-  # Score ring helper
-  score_ring_html <- function(score, size = 100) {
-    grade <- score_grade(score)
-    r <- (size / 2) - 10
-    circumference <- 2 * pi * r
-    offset <- circumference * (1 - score / 100)
-
-    div(
-      class = "score-ring fade-in",
-      style = paste0("width:", size, "px; height:", size, "px;"),
-      HTML(sprintf('
-        <svg width="%d" height="%d" viewBox="0 0 %d %d">
-          <circle cx="%d" cy="%d" r="%d" fill="none" stroke="#e9ecef" stroke-width="7"/>
-          <circle cx="%d" cy="%d" r="%d" fill="none" stroke="%s" stroke-width="7"
-                  stroke-dasharray="%.1f" stroke-dashoffset="%.1f"
-                  stroke-linecap="round" style="transition: stroke-dashoffset 0.8s ease;"/>
-        </svg>',
-        size, size, size, size,
-        size/2, size/2, r,
-        size/2, size/2, r, grade$color, circumference, offset)),
-      div(
-        class = "score-text",
-        div(class = "score-letter", style = paste0("color:", grade$color), grade$letter),
-        div(class = "score-label", grade$label)
-      )
-    )
-  }
 
   # Results comparison panel
   output$results_panel <- renderUI({
@@ -1557,12 +1139,9 @@ server <- function(input, output, session) {
     s <- attempt$sample
 
     guess_pct <- attempt$guess_pct
-    guess_count <- attempt$guess_count
     gt_pct <- s$inclusion_pct
-    gt_count <- s$n_inclusions
 
     area_s <- if (!is.na(attempt$area_score)) attempt$area_score else NULL
-    count_s <- if (!is.na(attempt$count_score)) attempt$count_score else NULL
     size_s <- if (!is.na(attempt$size_score)) attempt$size_score else NULL
     spher_s <- if (!is.na(attempt$spher_score)) attempt$spher_score else NULL
     overall <- attempt$overall
@@ -1601,30 +1180,6 @@ server <- function(input, output, session) {
             "Area cue: separate the clay matrix from inclusion-rich patches before moving the slider."
           } else {
             "Area cue: sweep for fine bright grains before settling on the final percentage."
-          }
-        )
-      }
-    }
-
-    if (!is.null(count_s)) {
-      count_diff <- guess_count - gt_count
-      feedback <- c(
-        feedback,
-        if (abs(count_diff) <= 10) {
-          "Grain count is close to the reference."
-        } else if (count_diff > 0) {
-          paste0("You overcounted by about ", round(abs(count_diff)), " inclusions.")
-        } else {
-          paste0("You undercounted by about ", round(abs(count_diff)), " inclusions.")
-        }
-      )
-      if (count_s < strong_threshold) {
-        feedback <- c(
-          feedback,
-          if (count_diff > 0) {
-            "Count cue: avoid splitting one elongated grain into several inclusions."
-          } else {
-            "Count cue: scan the image in rows so isolated grains are less likely to be missed."
           }
         )
       }
@@ -1677,27 +1232,17 @@ server <- function(input, output, session) {
     if (!is.null(area_s)) {
       stat_cards[[length(stat_cards) + 1]] <- div(
         class = "col",
-        div(class = "stat-card h-100",
+        div(class = "stat-card stat-card--area h-100",
             div(class = "stat-label", "Inclusion Area"),
             div(class = "stat-value", paste0(gt_pct, "%")),
             div(class = "stat-diff", diff_display(guess_pct, gt_pct, "%")))
       )
     }
 
-    if (!is.null(count_s)) {
-      stat_cards[[length(stat_cards) + 1]] <- div(
-        class = "col",
-        div(class = "stat-card h-100",
-            div(class = "stat-label", "Inclusion Count"),
-            div(class = "stat-value", gt_count),
-            div(class = "stat-diff", diff_display(guess_count, gt_count)))
-      )
-    }
-
     if (!is.null(size_s)) {
       stat_cards[[length(stat_cards) + 1]] <- div(
         class = "col",
-        div(class = "stat-card h-100",
+        div(class = "stat-card stat-card--size h-100",
             div(class = "stat-label", "Size Distribution"),
             div(class = "stat-value", paste0(size_s, "%")),
             div(class = "stat-diff", tags$span(
@@ -1715,9 +1260,9 @@ server <- function(input, output, session) {
 
       stat_cards[[length(stat_cards) + 1]] <- div(
         class = "col",
-        div(class = "stat-card h-100",
+        div(class = "stat-card stat-card--shape h-100",
             div(class = "stat-label", "Grain Shape"),
-            div(class = "stat-value", style = "font-size: 18px;", circ_label),
+            div(class = "stat-value", style = "font-size: 20px;", circ_label),
             div(class = "stat-diff text-muted",
                 paste0(ar_label, " sph. | circ=",
                        if (!is.na(gt_circ_val)) round(gt_circ_val, 2) else "?",
@@ -1776,24 +1321,21 @@ server <- function(input, output, session) {
     est_data <- comparison |> filter(source == "Your Estimate")
 
     ggplot() +
-      # Estimate bars (muted, left side of dodge)
       geom_col(data = est_data,
                aes(x = category, y = pct),
-               fill = "#bdc3c7", alpha = 0.7, width = 0.35,
+               fill = "#9b9285", alpha = 0.55, width = 0.36,
                position = position_nudge(x = -0.2)) +
-      # AI bars colored by size class (right side of dodge)
       geom_col(data = ai_data,
                aes(x = category, y = pct, fill = category),
-               width = 0.35,
+               width = 0.36,
                position = position_nudge(x = 0.15)) +
       scale_fill_manual(values = size_colors, guide = "none") +
-      # Manual legend
       annotate("text", x = 0.7, y = max(c(gt_vals, gu_vals)) + 3,
-               label = "\u25A0 Your estimate   ", color = "#bdc3c7",
-               size = 3.5, hjust = 0, fontface = "bold") +
+               label = "\u25A0 Your estimate   ", color = "#9b9285",
+               size = 3.4, hjust = 0, fontface = "bold") +
       annotate("text", x = 2.5, y = max(c(gt_vals, gu_vals)) + 3,
                label = "\u25A0 Ground truth (color = size class)",
-               color = "#555", size = 3.5, hjust = 0, fontface = "bold") +
+               color = "#3c352c", size = 3.4, hjust = 0, fontface = "bold") +
       labs(x = NULL, y = "Percentage (%)") +
       theme_petro()
   })
@@ -1814,53 +1356,38 @@ server <- function(input, output, session) {
 
     # Filter valid scores
     area_scores <- scores$area_score[scores$area_score >= 0]
-    count_scores <- scores$count_score[scores$count_score >= 0]
     size_scores <- scores$size_score[scores$size_score >= 0]
     spher_scores <- scores$spher_score[scores$spher_score >= 0]
 
     avg_area <- if (length(area_scores) > 0) round(mean(area_scores)) else NA
-    avg_count <- if (length(count_scores) > 0) round(mean(count_scores)) else NA
     avg_size <- if (length(size_scores) > 0) round(mean(size_scores)) else NA
     avg_spher <- if (length(spher_scores) > 0) round(mean(spher_scores)) else NA
 
     area_biases <- na.omit(scores$area_bias)
-    count_biases <- na.omit(scores$count_bias)
-
     mean_area_bias <- if (length(area_biases) > 0) mean(area_biases) else 0
-    mean_count_bias <- if (length(count_biases) > 0) mean(count_biases) else 0
 
     area_tendency <- if (is.na(avg_area)) "not tested"
                      else if (abs(mean_area_bias) < 1) "well-calibrated"
                      else if (mean_area_bias > 0) paste0("overestimating by ~", round(abs(mean_area_bias), 1), "%")
                      else paste0("underestimating by ~", round(abs(mean_area_bias), 1), "%")
 
-    count_tendency <- if (is.na(avg_count)) "not tested"
-                      else if (abs(mean_count_bias) < 5) "well-calibrated"
-                      else if (mean_count_bias > 0) paste0("overcounting by ~", round(abs(mean_count_bias)))
-                      else paste0("undercounting by ~", round(abs(mean_count_bias)))
-
     score_text <- function(score) if (!is.na(score)) paste0(score, "/100") else "\u2014"
 
     div(
-      class = "row row-cols-2 row-cols-md-5 g-3 mt-3",
+      class = "row row-cols-2 row-cols-md-4 g-3 mt-3",
       div(class = "col text-center", score_ring_html(avg_overall)),
       div(class = "col",
-          div(class = "stat-card h-100",
+          div(class = "stat-card stat-card--area h-100",
               div(class = "stat-label", "Area Score"),
               div(class = "stat-value", score_text(avg_area)),
               div(class = "stat-diff text-muted", area_tendency))),
       div(class = "col",
-          div(class = "stat-card h-100",
-              div(class = "stat-label", "Count Score"),
-              div(class = "stat-value", score_text(avg_count)),
-              div(class = "stat-diff text-muted", count_tendency))),
-      div(class = "col",
-          div(class = "stat-card h-100",
+          div(class = "stat-card stat-card--size h-100",
               div(class = "stat-label", "Size Score"),
               div(class = "stat-value", score_text(avg_size)),
               div(class = "stat-diff text-muted", paste0(length(size_scores), " attempts")))),
       div(class = "col",
-          div(class = "stat-card h-100",
+          div(class = "stat-card stat-card--shape h-100",
               div(class = "stat-label", "Shape Score"),
               div(class = "stat-value", score_text(avg_spher)),
               div(class = "stat-diff text-muted", paste0(length(spher_scores), " attempts"))))
@@ -1875,13 +1402,12 @@ server <- function(input, output, session) {
     plot_data <- scores |>
       mutate(attempt = row_number()) |>
       tidyr::pivot_longer(
-        cols = c(area_score, count_score, size_score, spher_score),
+        cols = c(area_score, size_score, spher_score),
         names_to = "metric", values_to = "score"
       ) |>
       filter(score >= 0) |>
       mutate(metric = case_when(
         metric == "area_score" ~ "Area %",
-        metric == "count_score" ~ "Count",
         metric == "size_score" ~ "Size Dist.",
         metric == "spher_score" ~ "Sphericity"
       ))
@@ -1900,46 +1426,56 @@ server <- function(input, output, session) {
 
     p +
       geom_point(size = 3) +
-      scale_color_manual(values = c("Area %" = "#3498db", "Count" = "#e74c3c",
-                                    "Size Dist." = "#f39c12", "Sphericity" = "#9b59b6")) +
+      scale_color_manual(values = c("Area %" = "#3498db",
+                                    "Size Dist." = "#f39c12",
+                                    "Sphericity" = "#6b4f8a")) +
       scale_y_continuous(limits = c(0, 100)) +
       scale_x_continuous(breaks = scales::breaks_pretty()) +
       labs(x = "Attempt", y = "Score", color = NULL, title = "Score by Attempt") +
       theme_petro()
   })
 
-  # Bias plot
+  # Calibration trend (area bias only)
   output$bias_plot <- renderPlot({
     scores <- rv$scores
     req(nrow(scores) > 0)
 
-    has_area <- any(!is.na(scores$area_bias))
-    has_count <- any(!is.na(scores$count_bias))
-    if (!has_area && !has_count) return(NULL)
+    biases <- scores$area_bias
+    if (!any(!is.na(biases))) return(NULL)
 
-    plot_scores <- scores |> mutate(attempt = row_number())
-
-    p <- ggplot(plot_scores, aes(x = factor(attempt)))
-
-    if (has_area) {
-      p <- p + geom_col(aes(y = area_bias), fill = "#3498db", alpha = 0.8, width = 0.4,
-                         position = position_nudge(x = -0.2), na.rm = TRUE)
-    }
-    if (has_count) {
-      p <- p + geom_col(aes(y = count_bias / 5), fill = "#e74c3c", alpha = 0.8, width = 0.4,
-                         position = position_nudge(x = 0.2), na.rm = TRUE)
+    bias_window <- 5L
+    rolling_mean <- function(x) {
+      vapply(seq_along(x), function(i) {
+        lo <- max(1L, i - bias_window + 1L)
+        mean(x[lo:i])
+      }, numeric(1))
     }
 
-    p + geom_hline(yintercept = 0, color = "#333", linewidth = 0.5) +
-      scale_y_continuous(
-        name = "Area bias (%)",
-        sec.axis = sec_axis(~ . * 5, name = "Count bias")
-      ) +
-      labs(x = "Attempt", title = "Estimation Bias (above = overestimate)") +
+    plot_data <- scores |>
+      mutate(attempt = row_number()) |>
+      select(attempt, bias = area_bias) |>
+      filter(!is.na(bias)) |>
+      arrange(attempt) |>
+      mutate(rolling = rolling_mean(bias))
+
+    if (nrow(plot_data) == 0) return(NULL)
+
+    ggplot(plot_data, aes(x = attempt)) +
+      geom_hline(yintercept = 0, color = "#9b9285",
+                 linewidth = 0.4, linetype = "22") +
+      geom_segment(aes(xend = attempt, y = 0, yend = bias),
+                   color = "#9b9285", linewidth = 0.5, alpha = 0.45) +
+      geom_point(aes(y = bias), color = "#6f6558", size = 1.8, alpha = 0.7) +
+      geom_line(aes(y = rolling), color = "#3498db", linewidth = 1.6) +
+      scale_x_continuous(breaks = scales::breaks_pretty()) +
+      labs(x = "Attempt", y = "Area bias (%)",
+           title = "Calibration trend",
+           subtitle = "Dots = per-attempt bias. Line = 5-attempt rolling mean. Drift toward zero is the goal.") +
       theme_petro() +
-      theme(axis.text.y.right = element_text(color = "#e74c3c"),
-            axis.title.y.left = element_text(color = "#3498db"),
-            axis.title.y.right = element_text(color = "#e74c3c"))
+      theme(
+        plot.subtitle = element_text(color = "#6f6558", size = 11,
+                                     margin = margin(b = 12))
+      )
   })
 }
 
