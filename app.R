@@ -1187,14 +1187,22 @@ server <- function(input, output, session) {
 
     if (!is.null(size_s)) {
       size_cats <- c("Fine", "Medium", "Coarse", "Very Coarse")
-      guess_dom <- size_cats[which.max(attempt$guess_size)]
       gt_dom <- size_cats[which.max(attempt$gt_size)]
+      guess_flat <- (max(attempt$guess_size) - min(attempt$guess_size)) < 5
+
       feedback <- c(
         feedback,
-        if (guess_dom == gt_dom) {
-          paste0("Dominant size class matches: ", gt_dom, ".")
+        if (guess_flat) {
+          paste0("Reference is mostly ", gt_dom,
+                 "; your estimate was an even spread across sizes.")
         } else {
-          paste0("Reference is mostly ", gt_dom, "; your estimate emphasized ", guess_dom, ".")
+          guess_dom <- size_cats[which.max(attempt$guess_size)]
+          if (guess_dom == gt_dom) {
+            paste0("Dominant size class matches: ", gt_dom, ".")
+          } else {
+            paste0("Reference is mostly ", gt_dom,
+                   "; your estimate emphasized ", guess_dom, ".")
+          }
         }
       )
       if (size_s < strong_threshold) {
@@ -1243,8 +1251,8 @@ server <- function(input, output, session) {
       stat_cards[[length(stat_cards) + 1]] <- div(
         class = "col",
         div(class = "stat-card stat-card--size h-100",
-            div(class = "stat-label", "Size Distribution"),
-            div(class = "stat-value", paste0(size_s, "%")),
+            div(class = "stat-label", "Size Score"),
+            div(class = "stat-value", paste0(size_s, "/100")),
             div(class = "stat-diff", tags$span(
               style = paste0("color:", score_grade(size_s)$color),
               score_grade(size_s)$label
